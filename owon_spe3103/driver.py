@@ -463,6 +463,7 @@ class PsuDriver(QThread):
 
     def apply_current(self, amp: float) -> None:
         i = max(0.0, min(scpi_map.I_MAX, float(amp)))
+        self.protection.set_setpoint_current(i)
         self.send("set_curr", i=i)
 
     def apply_ovp(self, volt: float, enabled: bool) -> None:
