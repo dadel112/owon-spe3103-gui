@@ -6,3 +6,4 @@ scpi_profile.json
 *.csv
 .vscode/
 .idea/
+.claude/
