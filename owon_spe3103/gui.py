@@ -1,4 +1,5 @@
-"""PyQt6-Hauptfenster: Verbindung, Sollwerte, Schutz, Messung, Plot, Log."""
+"""Das Fenster. Links die Bedienung, rechts Messwerte, Plot und Log.
+Von hier geht nichts direkt an PyVISA, alles laeuft ueber den Treiber."""
 
 from __future__ import annotations
 
@@ -22,7 +23,7 @@ CONFIRM_VOLT = 12.0
 
 
 class MainWindow(QMainWindow):
-    """Hauptfenster der Netzteilsteuerung."""
+    """Hauptfenster."""
 
     def __init__(self, demo: bool = False):
         super().__init__()
@@ -401,7 +402,9 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot(dict)
     def _on_profile(self, profile: dict) -> None:
-        """Nicht aufgeloeste Funktionen sichtbar deaktivieren."""
+        """Was die Discovery nicht gefunden hat, wird ausgegraut und beschriftet.
+        Lieber ein sichtbar totes Feld als ein Knopf, der stillschweigend nichts tut.
+        """
         def mark(widget, key: str, label: str) -> None:
             ok = bool(profile.get(key))
             widget.setEnabled(ok)
@@ -415,7 +418,9 @@ class MainWindow(QMainWindow):
         mark(self.prot_clear_btn, "prot_clear", "Schutz-Reset")
         mark(self.remote_btn, "remote", "Remote")
         mark(self.local_btn, "local", "Local")
-        self.ovp_check.setEnabled(True)      # Software-OVP bleibt immer moeglich
+        # Die Haken bleiben trotzdem bedienbar - ohne Hardware-Schutz greift
+        # eben nur die Software-Ueberwachung.
+        self.ovp_check.setEnabled(True)
         self.ocp_check.setEnabled(True)
         missing = sorted(k for k, v in profile.items() if not v)
         if missing:

@@ -1,6 +1,6 @@
-"""PyVISA-Anbindung des OWON SPE3103.
-Alle VISA-Zugriffe laufen ausschliesslich im QThread dieses Moduls.
-Enthaelt zusaetzlich ein simuliertes Geraet fuer den Demo-Modus.
+"""Alles was mit dem Netzteil redet.
+PyVISA wird ausschliesslich aus dem QThread hier drin angefasst, die GUI schickt
+nur Jobs in die Queue. Der Demo-Transport unten ersetzt die Hardware zum Testen.
 """
 
 from __future__ import annotations
@@ -64,8 +64,9 @@ class VisaTransport:
 
 
 class DemoTransport:
-    """Simuliertes Netzteil. Kennt nur den ersten Kandidaten je Funktion.
-    Befehlserkennung ausschliesslich ueber scpi_map, keine SCPI-Literale hier.
+    """Netzteil-Attrappe fuer --demo. Versteht absichtlich nur den jeweils ersten
+    Kandidaten aus scpi_map, damit man im GUI auch mal ein 'nicht unterstuetzt'
+    zu sehen bekommt. Die Befehle werden aus der Map abgeleitet, nicht hier getippt.
     """
 
     UNSUPPORTED = {"measure_power"}
@@ -99,6 +100,8 @@ class DemoTransport:
         if not self.output or self.tripped:
             return 0.0, 0.0
         t = time.time() - self._t0
+        # Etwas Welligkeit auf der Spannung, dazu eine langsam atmende Last -
+        # sieht im Plot lebendiger aus als eine gerade Linie.
         v = self.v_set * (1.0 + 0.004 * math.sin(t * 1.7)) + random.uniform(-0.004, 0.004)
         load = 6.0 + 1.5 * math.sin(t * 0.4)
         i = min(self.i_set, max(0.0, v / load)) + random.uniform(-0.002, 0.002)
@@ -219,6 +222,8 @@ def list_resources() -> list[str]:
 
 @dataclass(order=True)
 class _Job:
+    # seq haelt die Reihenfolge innerhalb einer Prioritaet stabil und verhindert,
+    # dass die PriorityQueue bei Gleichstand ueber die restlichen Felder vergleicht.
     priority: int
     seq: int
     key: str = field(compare=False, default="")
@@ -229,7 +234,9 @@ class _Job:
 
 
 class PsuDriver(QThread):
-    """Worker-Thread: Verbindung, Queue, Polling, Schutzueberwachung."""
+    """Der Arbeiter: haelt die Verbindung, arbeitet die Queue ab, pollt Messwerte
+    und schaut dabei nach, ob eine Schutzschwelle gerissen ist.
+    """
 
     reading_ready = pyqtSignal(float, float, float, float)   # v, i, p, ts
     connection_changed = pyqtSignal(bool)
@@ -296,6 +303,8 @@ class PsuDriver(QThread):
 
     # -- Thread -------------------------------------------------------
     def run(self) -> None:
+        # Kurzes Queue-Timeout statt blockierendem get(), sonst kaeme das Polling
+        # nie dran solange niemand etwas anklickt.
         while self._running:
             try:
                 job = self._q.get(timeout=0.02)
@@ -304,7 +313,7 @@ class PsuDriver(QThread):
             if job is not None:
                 try:
                     self._dispatch(job)
-                except Exception as exc:      # noqa: BLE001 - nie crashen
+                except Exception as exc:
                     self._fail(exc)
                 if job.action == "quit":
                     break
@@ -312,7 +321,7 @@ class PsuDriver(QThread):
                 self._next_poll = time.monotonic() + self._poll_ms / 1000.0
                 try:
                     self._poll()
-                except Exception as exc:      # noqa: BLE001
+                except Exception as exc:
                     self._fail(exc)
         self._shutdown()
 
@@ -340,7 +349,7 @@ class PsuDriver(QThread):
             else:
                 self._transport = VisaTransport(resource, baud, timeout_ms)
                 self.log_message.emit("INFO", f"Verbunden mit {resource} @ {baud} Bd")
-        except Exception as exc:              # noqa: BLE001
+        except Exception as exc:
             self._transport = None
             self.error_occurred.emit(f"Verbindung fehlgeschlagen: {exc}")
             self.connection_changed.emit(False)
@@ -365,17 +374,19 @@ class PsuDriver(QThread):
         self.connection_changed.emit(True)
 
     def _shutdown(self, quiet: bool = False) -> None:
+        # Reihenfolge ist wichtig: erst stromlos, dann Bedienung ans Geraet zurueck,
+        # erst danach die Schnittstelle zumachen.
         if self._transport is None:
             self._connected = False
             return
         try:
             self._exec("output_off")
             self._exec("local")
-        except Exception:                 # noqa: BLE001
+        except Exception:
             pass
         try:
             self._transport.close()
-        except Exception:                 # noqa: BLE001
+        except Exception:
             pass
         self._transport = None
         self.demo_device = None
@@ -394,7 +405,7 @@ class PsuDriver(QThread):
         try:
             if self._transport is not None:
                 self._transport.close()
-        except Exception:                 # noqa: BLE001
+        except Exception:
             pass
         self._transport = None
         for attempt in range(1, RECONNECT_TRIES + 1):
@@ -406,7 +417,7 @@ class PsuDriver(QThread):
                 self._open()
                 if self._connected:
                     return
-            except Exception as exc2:     # noqa: BLE001
+            except Exception as exc2:
                 self.log_message.emit("ERROR", f"Reconnect fehlgeschlagen: {exc2}")
         self.error_occurred.emit("Reconnect endgueltig fehlgeschlagen")
 
@@ -501,6 +512,8 @@ class PsuDriver(QThread):
         p = v * i
         self.reading_ready.emit(v, i, p, ts)
 
+        # Erst das Geraet fragen, falls es Trip-Flags kennt. Danach in jedem Fall
+        # noch selbst nachrechnen - doppelt haelt besser.
         state = self.protection
         hw_trip = ""
         if state.hw_ovp_trip:
@@ -525,10 +538,10 @@ class PsuDriver(QThread):
         self.mode_changed.emit(state.mode_hint(v, i))
 
     def _emergency(self, kind: str, value: float, hardware: bool) -> None:
-        """Sofortiges Abschalten, umgeht die Queue."""
+        """Abschalten ohne Umweg ueber die Queue - wir sind hier schon im Worker."""
         try:
             self._exec("output_off")
-        except Exception as exc:          # noqa: BLE001
+        except Exception as exc:
             self.log_message.emit("ERROR", f"Not-Aus fehlgeschlagen: {exc}")
         src = "Hardware" if hardware else "Software"
         self.log_message.emit("ALARM", f"{src}-{kind} ausgeloest bei {value:.3f}")

@@ -1,4 +1,5 @@
-"""Live-Plot (pyqtgraph): V links, A rechts, gemeinsame Zeitachse."""
+"""Der Live-Plot. Spannung auf der linken Achse, Strom auf der rechten,
+gemeinsame Zeitachse - pyqtgraph braucht dafuer zwei verkoppelte ViewBoxen."""
 
 from __future__ import annotations
 
@@ -10,11 +11,11 @@ from PyQt6.QtWidgets import (QCheckBox, QComboBox, QDoubleSpinBox, QHBoxLayout,
                              QLabel, QPushButton, QVBoxLayout, QWidget)
 
 WINDOWS = [("10 s", 10), ("60 s", 60), ("5 min", 300), ("30 min", 1800)]
-MAX_POINTS = 20000          # harte Obergrenze, unabhaengig vom Zeitfenster
+MAX_POINTS = 20000          # Notbremse falls beim Trimmen mal etwas schiefgeht
 
 
 class LivePlot(QWidget):
-    """Rolling-Buffer-Plot mit Schwellenlinien und Trip-Markern."""
+    """Mitlaufender Plot mit Schwellenlinien und Markern fuer Ausloesungen."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -129,7 +130,8 @@ class LivePlot(QWidget):
             self._vb2.setYRange(0, self._imax.value(), padding=0)
 
     def _trim(self) -> None:
-        """Buffer auf das Zeitfenster begrenzen (Speicher bleibt konstant)."""
+        """Alles aelter als das Zeitfenster fliegt raus. Laeuft auch waehrend der
+        Pause weiter, sonst waechst der Buffer im Hintergrund munter mit."""
         if not self._t:
             return
         cutoff = self._t[-1] - self._window
@@ -156,7 +158,8 @@ class LivePlot(QWidget):
 
     # -- API ----------------------------------------------------------
     def add_point(self, volt: float, amp: float, ts: float) -> None:
-        """Neuen Messpunkt aufnehmen; Pause friert nur die Anzeige ein."""
+        """Messpunkt anhaengen. Pause haelt nur die Anzeige an, aufgezeichnet
+        wird trotzdem weiter."""
         if self._t0 is None:
             self._t0 = ts
         self._t.append(ts - self._t0)

@@ -1,9 +1,32 @@
+# Python
 __pycache__/
 *.pyc
+*.pyo
+
+# Virtuelle Umgebungen
 .venv/
 venv/
+env/
+
+# Build-Artefakte (PyInstaller)
+build/
+dist/
+*.spec
+*.manifest
+
+# Laufzeitdaten und Messungen
 scpi_profile.json
 *.csv
+*.log
+
+# Secrets
+.env
+.env.*
+*.key
+*.pem
+secrets.json
+
+# Editoren / Tools
 .vscode/
 .idea/
 .claude/

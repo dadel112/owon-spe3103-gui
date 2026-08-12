@@ -1,4 +1,5 @@
-"""Startpunkt. '--demo' startet ein simuliertes Netzteil ohne Hardware."""
+"""Startet die Anwendung. Mit --demo laeuft alles gegen ein simuliertes Netzteil,
+dafuer braucht es weder Hardware noch einen freien COM-Port."""
 
 import argparse
 import sys

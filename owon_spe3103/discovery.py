@@ -1,6 +1,6 @@
-"""Laufzeit-Discovery der SCPI-Befehle.
-Testet die Kandidaten aus scpi_map gegen das Geraet und speichert das
-Ergebnis in scpi_profile.json neben main.py.
+"""Herausfinden, welche SCPI-Schreibweise das Geraet tatsaechlich versteht.
+Die Kandidaten aus scpi_map werden der Reihe nach ausprobiert, was durchgeht
+landet in scpi_profile.json und wird beim naechsten Start einfach geladen.
 """
 
 from __future__ import annotations
@@ -21,8 +21,9 @@ def profile_path() -> str:
 
 
 class Discovery:
-    """Ermittelt pro Funktion den ersten akzeptierten Kandidaten.
-    Set-Befehle werden nur bei ausgeschaltetem Ausgang und mit Readback geprueft.
+    """Probiert die Kandidaten durch und nimmt den ersten, den das Geraet akzeptiert.
+    Schreibende Befehle nur bei ausgeschaltetem Ausgang, und wo es geht wird der
+    Wert danach zurueckgelesen statt dem Geraet einfach zu glauben.
     """
 
     def __init__(self, transport, log=None):
@@ -48,7 +49,7 @@ class Discovery:
             try:
                 if self._err_code(self._query(self._err_cmd)) == 0:
                     return
-            except Exception:             # noqa: BLE001
+            except Exception:
                 return
 
     @staticmethod
@@ -59,12 +60,13 @@ class Discovery:
             return 0
 
     def _accepted(self) -> bool:
-        """SYST:ERR? pollen; ohne Fehlerabfrage gilt 'kein Timeout' als Erfolg."""
+        """Fehlerspeicher abfragen. Kennt das Geraet die Abfrage nicht, muss
+        uns 'hat nicht getimeoutet' als Beweis reichen."""
         if not self._err_cmd:
             return True
         try:
             return self._err_code(self._query(self._err_cmd)) == 0
-        except Exception:                 # noqa: BLE001
+        except Exception:
             return False
 
     @staticmethod
@@ -79,7 +81,7 @@ class Discovery:
     def _try_query(self, cand: str, numeric: bool) -> bool:
         try:
             resp = self._query(cand)
-        except Exception:                 # noqa: BLE001
+        except Exception:
             self._clear_errors()
             return False
         if not resp:
@@ -92,7 +94,7 @@ class Discovery:
     def _try_write(self, cand: str) -> bool:
         try:
             self._write(cand)
-        except Exception:                 # noqa: BLE001
+        except Exception:
             self._clear_errors()
             return False
         return self._accepted()
@@ -101,7 +103,7 @@ class Discovery:
         args = scpi_map.PROBE_ARGS.get(key, {})
         try:
             self._write(scpi_map.render(cand, **args))
-        except Exception:                 # noqa: BLE001
+        except Exception:
             self._clear_errors()
             return False
         if not self._accepted():
@@ -112,7 +114,7 @@ class Discovery:
             return True                   # ohne Readback gilt Fehlerfreiheit
         try:
             value = float(self._query(rb_cmd).split(",")[0])
-        except Exception:                 # noqa: BLE001
+        except Exception:
             self._clear_errors()
             return False
         target = float(next(iter(args.values()), 0.0))
@@ -136,7 +138,7 @@ class Discovery:
                 if idn:
                     profile["idn"] = cand
                     break
-            except Exception:             # noqa: BLE001
+            except Exception:
                 continue
         self._log("INFO", f"IDN: {idn or 'keine Antwort'}")
 
@@ -146,11 +148,11 @@ class Discovery:
                     profile["system_error"] = cand
                     self._err_cmd = cand
                     break
-            except Exception:             # noqa: BLE001
+            except Exception:
                 continue
         self._clear_errors()
 
-        # Reihenfolge: erst Queries (Readback-Basis), dann Writes, dann Sets.
+        # Die Abfragen zuerst, weil die Sets sie spaeter zum Nachpruefen brauchen.
         query_keys = ["measure_volt", "measure_curr", "measure_power",
                       "get_volt_set", "get_curr_set", "output_state",
                       "ovp_get", "ocp_get", "ovp_tripped", "ocp_tripped"]
@@ -162,7 +164,7 @@ class Discovery:
         for key in query_keys:
             profile[key] = self._first(key, lambda c: self._try_query(c, True))
 
-        # Ausgang sicher aus, bevor Writes/Sets getestet werden.
+        # Ab hier wird geschrieben, also vorher den Ausgang stilllegen.
         off = self._first("output_off", self._try_write)
         profile["output_off"] = off
 
@@ -170,8 +172,8 @@ class Discovery:
             if key == "output_off":
                 continue
             if key == "output_on":
-                # Nur syntaktisch pruefen waere unsicher: Kandidat uebernehmen,
-                # der zum akzeptierten output_off-Praefix passt.
+                # Einschalten zum Testen kommt nicht in Frage. Also den Kandidaten
+                # nehmen, der zum akzeptierten Ausschalt-Befehl passt.
                 profile[key] = self._pair_with(key, off)
                 continue
             profile[key] = self._first(key, self._try_write)

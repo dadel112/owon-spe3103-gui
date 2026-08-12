@@ -1,4 +1,5 @@
-"""OVP/OCP-Logik: Hardware-Schutz plus stets aktiver Software-Fallback."""
+"""OVP und OCP. Der Schutz im Geraet wird genutzt wenn es ihn kann, die
+Ueberwachung hier laeuft aber grundsaetzlich immer mit."""
 
 from __future__ import annotations
 
@@ -8,7 +9,9 @@ from . import scpi_map
 
 
 class ProtectionManager:
-    """Schwellen, Ansprechverzoegerung und Software-Ueberwachung."""
+    """Haelt Schwellen und Verzoegerung und sagt beim Polling, ob abgeschaltet
+    werden muss. Wird aus zwei Threads angefasst, daher das Lock.
+    """
 
     def __init__(self):
         self._lock = threading.Lock()
@@ -65,7 +68,8 @@ class ProtectionManager:
 
     # -- Zustand ------------------------------------------------------
     def mark_tripped(self, kind: str) -> None:
-        """Merkt eine Ausloesung; Reset nur explizit."""
+        """Ausloesung vormerken. Der Zustand bleibt stehen bis jemand den
+        Reset-Knopf drueckt."""
         with self._lock:
             self.tripped = kind
             self._over_since.clear()
@@ -96,7 +100,8 @@ class ProtectionManager:
             self.i_setpoint = max(0.0, float(amp))
 
     def mode_hint(self, volt: float, amp: float) -> str:
-        """Grobe CV/CC-Ableitung aus Messwert und Strom-Sollwert."""
+        """CV/CC geraten - das Geraet meldet den Modus nicht, also vergleichen wir
+        den gemessenen Strom mit dem Sollwert."""
         with self._lock:
             limit = self.i_setpoint
         if amp <= 0.001 and volt <= 0.01:
@@ -105,7 +110,10 @@ class ProtectionManager:
 
     # -- Software-Ueberwachung ---------------------------------------
     def check(self, volt: float, amp: float, ts: float) -> tuple[str, float] | None:
-        """Prueft beide Schwellen; liefert (typ, wert) wenn abgeschaltet werden muss."""
+        """Beide Schwellen pruefen. Rueckgabe (Typ, Wert) heisst: sofort abschalten.
+        Ueberschreitungen muessen die eingestellte Verzoegerung lang anstehen,
+        damit ein Einschaltpeak nicht gleich alles abwuergt.
+        """
         with self._lock:
             if self.tripped:
                 return None

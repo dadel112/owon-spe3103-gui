@@ -1,7 +1,8 @@
 """Zentrale SCPI-Befehlstabelle. Kandidaten unverifiziert. Discovery entscheidet zur Laufzeit."""
 
-# Pro Funktion eine Kandidatenliste, erster funktionierender Kandidat gewinnt.
-# KEIN SCPI-String darf ausserhalb dieser Datei stehen.
+# Fuer das SPE3103 gibt es keine verlaessliche Befehlsreferenz, deshalb pro Funktion
+# mehrere plausible Schreibweisen. Wer sein Geraet kennt, traegt hier ein was wirklich
+# geht - und nur hier, sonst steht am Ende wieder ueberall SCPI im Code herum.
 COMMANDS = {
     "idn":            ["*IDN?"],
     "measure_volt":   ["MEAS:VOLT?", "MEASure:VOLTage?"],
@@ -30,14 +31,14 @@ COMMANDS = {
     "local":          ["SYST:LOC"],
 }
 
-# Funktionen mit '?' liefern eine Antwort (query), alle anderen sind reine Writes.
+# Alles hier drin wird per query() geschickt, der Rest ist reines Schreiben.
 QUERY_KEYS = {
     "idn", "measure_volt", "measure_curr", "measure_power",
     "get_volt_set", "get_curr_set", "output_state",
     "ovp_get", "ocp_get", "ovp_tripped", "ocp_tripped", "system_error",
 }
 
-# Set-Befehl -> Readback-Befehl fuer die Discovery-Verifikation.
+# Womit die Discovery nachprueft, ob ein Set-Befehl tatsaechlich angekommen ist.
 READBACK = {
     "set_volt": "get_volt_set",
     "set_curr": "get_curr_set",
@@ -45,7 +46,7 @@ READBACK = {
     "ocp_set":  "ocp_get",
 }
 
-# Formatierungs-Testwerte fuer die Discovery (ungefaehrlich, Ausgang bleibt aus).
+# Harmlose Werte zum Antesten. Der Ausgang ist dabei aus, es passiert also nichts.
 PROBE_ARGS = {
     "set_volt": {"v": 1.0},
     "set_curr": {"i": 0.5},
@@ -53,7 +54,7 @@ PROBE_ARGS = {
     "ocp_set":  {"i": 1.0},
 }
 
-# Geraetegrenzen.
+# Typenschild des SPE3103, plus etwas Luft nach oben fuer die Schutzschwellen.
 V_MAX = 30.0
 I_MAX = 10.0
 OVP_MAX = 33.0
