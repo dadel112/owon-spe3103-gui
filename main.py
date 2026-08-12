@@ -10,9 +10,9 @@ from owon_spe3103.gui import MainWindow
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="OWON SPE3103 Steuerung")
+    parser = argparse.ArgumentParser(description="OWON SPE3103 control")
     parser.add_argument("--demo", action="store_true",
-                        help="simuliertes Geraet statt echter VISA-Verbindung")
+                        help="use a simulated device instead of a real VISA connection")
     args = parser.parse_args()
 
     app = QApplication(sys.argv)

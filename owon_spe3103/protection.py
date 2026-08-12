@@ -88,10 +88,10 @@ class ProtectionManager:
             if self.hw_ocp:
                 hw.append("OCP")
             if hw:
-                trip = "mit Trip-Abfrage" if (self.hw_ovp_trip or self.hw_ocp_trip) \
-                    else "ohne Trip-Abfrage"
-                return f"Hardware-{'/'.join(hw)} aktiv ({trip}) + Software-Ueberwachung"
-            return "nur Software-Ueberwachung (Polling-begrenzt)"
+                trip = "with trip query" if (self.hw_ovp_trip or self.hw_ocp_trip) \
+                    else "no trip query"
+                return f"hardware {'/'.join(hw)} active ({trip}) + software watchdog"
+            return "software watchdog only, limited by the poll interval"
 
     def set_setpoint_current(self, amp: float) -> None:
         """Remember the current setpoint, needed for the CV/CC guess."""

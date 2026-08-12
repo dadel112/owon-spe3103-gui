@@ -43,8 +43,8 @@ candidates per function and `discovery.py` tries them on first connect: queries 
 only with the output off and verified by readback, each followed by `SYST:ERR?`.
 
 Whatever worked is stored in `scpi_profile.json` next to `main.py` and reused on the next start.
-Delete the file to force another run. Anything that could not be resolved shows up as
-"nicht unterstützt" on the matching control instead of failing silently.
+Delete the file to force another run. Anything that could not be resolved is marked
+"not supported" on the matching control instead of failing silently.
 
 All SCPI strings live in `scpi_map.py` and nowhere else.
 

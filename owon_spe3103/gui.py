@@ -66,7 +66,7 @@ class MainWindow(QMainWindow):
         right.addWidget(self._build_log(), 1)
 
     def _build_connection(self) -> QGroupBox:
-        box = QGroupBox("Verbindung")
+        box = QGroupBox("Connection")
         lay = QGridLayout(box)
         self.res_box = QComboBox()
         self.res_box.setEditable(True)
@@ -78,14 +78,14 @@ class MainWindow(QMainWindow):
         self.baud_box.setCurrentText(str(DEFAULT_BAUD))
         self.connect_btn = QPushButton("Connect")
         self.disconnect_btn = QPushButton("Disconnect")
-        self.status_dot = QLabel("● getrennt")
+        self.status_dot = QLabel("● disconnected")
         self.idn_label = QLabel("IDN: -")
         self.idn_label.setWordWrap(True)
 
-        lay.addWidget(QLabel("Ressource:"), 0, 0)
+        lay.addWidget(QLabel("Resource:"), 0, 0)
         lay.addWidget(self.res_box, 0, 1)
         lay.addWidget(self.refresh_btn, 0, 2)
-        lay.addWidget(QLabel("Baudrate:"), 1, 0)
+        lay.addWidget(QLabel("Baud rate:"), 1, 0)
         lay.addWidget(self.baud_box, 1, 1)
         lay.addWidget(self.connect_btn, 2, 1)
         lay.addWidget(self.disconnect_btn, 2, 2)
@@ -94,7 +94,7 @@ class MainWindow(QMainWindow):
         return box
 
     def _build_setpoints(self) -> QGroupBox:
-        box = QGroupBox("Sollwerte")
+        box = QGroupBox("Setpoints")
         lay = QGridLayout(box)
         self.v_spin = QDoubleSpinBox()
         self.v_spin.setRange(0.0, scpi_map.V_MAX)
@@ -110,13 +110,13 @@ class MainWindow(QMainWindow):
         self.i_spin.setSuffix(" A")
         self.i_slider = QSlider(Qt.Orientation.Horizontal)
         self.i_slider.setRange(0, int(scpi_map.I_MAX * 1000))
-        self.apply_btn = QPushButton("Setzen")
-        self.live_check = QCheckBox("Live uebernehmen (beim Loslassen)")
+        self.apply_btn = QPushButton("Apply")
+        self.live_check = QCheckBox("Apply live (on slider release)")
 
-        lay.addWidget(QLabel("Spannung:"), 0, 0)
+        lay.addWidget(QLabel("Voltage:"), 0, 0)
         lay.addWidget(self.v_spin, 0, 1)
         lay.addWidget(self.v_slider, 1, 0, 1, 2)
-        lay.addWidget(QLabel("Strom:"), 2, 0)
+        lay.addWidget(QLabel("Current:"), 2, 0)
         lay.addWidget(self.i_spin, 2, 1)
         lay.addWidget(self.i_slider, 3, 0, 1, 2)
         lay.addWidget(self.live_check, 4, 0, 1, 2)
@@ -124,29 +124,29 @@ class MainWindow(QMainWindow):
         return box
 
     def _build_protection(self) -> QGroupBox:
-        box = QGroupBox("Schutz (OVP / OCP)")
+        box = QGroupBox("Protection (OVP / OCP)")
         lay = QFormLayout(box)
         self.ovp_spin = QDoubleSpinBox()
         self.ovp_spin.setRange(0.0, scpi_map.OVP_MAX)
         self.ovp_spin.setDecimals(2)
         self.ovp_spin.setValue(scpi_map.OVP_MAX)
         self.ovp_spin.setSuffix(" V")
-        self.ovp_check = QCheckBox("OVP aktiv")
+        self.ovp_check = QCheckBox("OVP armed")
         self.ocp_spin = QDoubleSpinBox()
         self.ocp_spin.setRange(0.0, scpi_map.OCP_MAX)
         self.ocp_spin.setDecimals(2)
         self.ocp_spin.setValue(scpi_map.OCP_MAX)
         self.ocp_spin.setSuffix(" A")
-        self.ocp_check = QCheckBox("OCP aktiv")
+        self.ocp_check = QCheckBox("OCP armed")
         self.delay_spin = QSpinBox()
         self.delay_spin.setRange(0, 2000)
         self.delay_spin.setSuffix(" ms")
-        self.prot_apply_btn = QPushButton("Schutz uebernehmen")
-        self.prot_clear_btn = QPushButton("Schutz zuruecksetzen")
+        self.prot_apply_btn = QPushButton("Apply protection")
+        self.prot_clear_btn = QPushButton("Reset protection")
         self.prot_status = QLabel("-")
         self.prot_status.setWordWrap(True)
-        self.prot_hint = QLabel("Software-Ueberwachung ist durch das Polling-Intervall "
-                                "begrenzt und ersetzt keine Hardware-Sicherung.")
+        self.prot_hint = QLabel("The software watchdog is limited by the poll interval and is "
+                                "no replacement for a fuse or real hardware protection.")
         self.prot_hint.setWordWrap(True)
         self.prot_hint.setStyleSheet("color:#94a3b8; font-size:11px;")
         self.alarm = QLabel("")
@@ -155,11 +155,11 @@ class MainWindow(QMainWindow):
             "background:#7f1d1d; color:white; font-weight:bold; padding:6px;")
         self.alarm.setWordWrap(True)
 
-        lay.addRow("OVP-Schwelle:", self.ovp_spin)
+        lay.addRow("OVP threshold:", self.ovp_spin)
         lay.addRow("", self.ovp_check)
-        lay.addRow("OCP-Schwelle:", self.ocp_spin)
+        lay.addRow("OCP threshold:", self.ocp_spin)
         lay.addRow("", self.ocp_check)
-        lay.addRow("Ansprechverzoegerung:", self.delay_spin)
+        lay.addRow("Trip delay:", self.delay_spin)
         lay.addRow(self.prot_apply_btn)
         lay.addRow(self.prot_clear_btn)
         lay.addRow(self.prot_status)
@@ -168,17 +168,17 @@ class MainWindow(QMainWindow):
         return box
 
     def _build_output(self) -> QGroupBox:
-        box = QGroupBox("Ausgang")
+        box = QGroupBox("Output")
         lay = QVBoxLayout(box)
-        self.output_btn = QPushButton("AUSGANG AUS")
+        self.output_btn = QPushButton("OUTPUT OFF")
         self.output_btn.setCheckable(True)
         self.output_btn.setMinimumHeight(64)
         self.output_btn.setFont(QFont("Segoe UI", 14, QFont.Weight.Bold))
         lay.addWidget(self.output_btn)
         if self.demo:
             row = QHBoxLayout()
-            self.demo_ovp_btn = QPushButton("Demo: OVP ausloesen")
-            self.demo_ocp_btn = QPushButton("Demo: OCP ausloesen")
+            self.demo_ovp_btn = QPushButton("Demo: force OVP")
+            self.demo_ocp_btn = QPushButton("Demo: force OCP")
             row.addWidget(self.demo_ovp_btn)
             row.addWidget(self.demo_ocp_btn)
             lay.addLayout(row)
@@ -206,7 +206,7 @@ class MainWindow(QMainWindow):
         return frame
 
     def _build_misc(self) -> QGroupBox:
-        box = QGroupBox("Sonstiges")
+        box = QGroupBox("Misc")
         lay = QGridLayout(box)
         self.poll_spin = QSpinBox()
         self.poll_spin.setRange(100, 2000)
@@ -219,7 +219,7 @@ class MainWindow(QMainWindow):
         self.raw_edit.setPlaceholderText("Raw-SCPI ...")
         self.raw_send_btn = QPushButton("Send")
         self.raw_query_btn = QPushButton("Query")
-        self.csv_btn = QPushButton("CSV aufzeichnen")
+        self.csv_btn = QPushButton("Record CSV")
         self.csv_btn.setCheckable(True)
 
         lay.addWidget(QLabel("Polling:"), 0, 0)
@@ -251,7 +251,7 @@ class MainWindow(QMainWindow):
         d.log_message.connect(self._on_log)
         d.error_occurred.connect(lambda t: self._on_log("ERROR", t))
         d.profile_ready.connect(self._on_profile)
-        d.idn_ready.connect(lambda s: self.idn_label.setText(f"IDN: {s or 'unbekannt'}"))
+        d.idn_ready.connect(lambda s: self.idn_label.setText(f"IDN: {s or 'unknown'}"))
         d.raw_response.connect(lambda s: self.raw_edit.setToolTip(s))
         d.mode_changed.connect(self.mode_label.setText)
         d.setpoints_read.connect(self._on_setpoints)
@@ -327,9 +327,9 @@ class MainWindow(QMainWindow):
     def _on_output_toggle(self, on: bool) -> None:
         if on and self.v_spin.value() > CONFIRM_VOLT:
             answer = QMessageBox.question(
-                self, "Ausgang einschalten",
-                f"Sollspannung {self.v_spin.value():.2f} V liegt ueber "
-                f"{CONFIRM_VOLT:.0f} V. Wirklich einschalten?")
+                self, "Switch output on",
+                f"Setpoint is {self.v_spin.value():.2f} V, above the "
+                f"{CONFIRM_VOLT:.0f} V mark. Switch on anyway?")
             if answer != QMessageBox.StandardButton.Yes:
                 self.output_btn.setChecked(False)
                 return
@@ -338,24 +338,24 @@ class MainWindow(QMainWindow):
         self.driver.send("output_on" if on else "output_off")
 
     def _style_output(self, on: bool) -> None:
-        self.output_btn.setText("AUSGANG AN" if on else "AUSGANG AUS")
+        self.output_btn.setText("OUTPUT ON" if on else "OUTPUT OFF")
         self.output_btn.setStyleSheet(
             "background:#16a34a; color:white;" if on else "background:#475569; color:#e2e8f0;")
 
     def _force_demo(self, kind: str) -> None:
         dev = self.driver.demo_device
         if dev is None:
-            self._on_log("WARN", "Demo-Geraet nicht verbunden")
+            self._on_log("WARN", "demo device not connected")
             return
         if kind == "ovp":
             dev.force_ovp = True
         else:
             dev.force_ocp = True
-        self._on_log("INFO", f"Demo: {kind.upper()}-Ausloesung erzwungen")
+        self._on_log("INFO", f"demo: forcing {kind.upper()} trip")
 
     def _on_csv_toggle(self, on: bool) -> None:
         if on:
-            path, _ = QFileDialog.getSaveFileName(self, "CSV speichern", "psu_log.csv",
+            path, _ = QFileDialog.getSaveFileName(self, "Save CSV", "psu_log.csv",
                                                   "CSV (*.csv)")
             if not path:
                 self.csv_btn.setChecked(False)
@@ -363,10 +363,10 @@ class MainWindow(QMainWindow):
             self._csv_file = open(path, "w", newline="", encoding="utf-8")
             self._csv_writer = csv.writer(self._csv_file)
             self._csv_writer.writerow(["timestamp", "volt", "ampere", "watt"])
-            self.csv_btn.setText("Aufzeichnung stoppen")
+            self.csv_btn.setText("Stop recording")
         else:
             self._close_csv()
-            self.csv_btn.setText("CSV aufzeichnen")
+            self.csv_btn.setText("Record CSV")
 
     def _close_csv(self) -> None:
         if self._csv_file:
@@ -386,7 +386,7 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot(bool)
     def _set_connected(self, ok: bool) -> None:
-        self.status_dot.setText("● verbunden" if ok else "● getrennt")
+        self.status_dot.setText("● connected" if ok else "● disconnected")
         self.status_dot.setStyleSheet(f"color:{'#16a34a' if ok else '#94a3b8'};")
         self.connect_btn.setEnabled(not ok)
         self.disconnect_btn.setEnabled(ok)
@@ -409,13 +409,13 @@ class MainWindow(QMainWindow):
             ok = bool(profile.get(key))
             widget.setEnabled(ok)
             if not ok:
-                widget.setToolTip(f"{label} nicht unterstuetzt")
+                widget.setToolTip(f"{label} not supported by this device")
                 if isinstance(widget, (QCheckBox, QPushButton)):
-                    widget.setText(widget.text() + " (nicht unterstuetzt)")
+                    widget.setText(widget.text() + " (not supported)")
 
         mark(self.ovp_check, "ovp_set", "Hardware-OVP")
         mark(self.ocp_check, "ocp_set", "Hardware-OCP")
-        mark(self.prot_clear_btn, "prot_clear", "Schutz-Reset")
+        mark(self.prot_clear_btn, "prot_clear", "Protection reset")
         mark(self.remote_btn, "remote", "Remote")
         mark(self.local_btn, "local", "Local")
         # The checkboxes stay usable either way, without device-side protection
@@ -424,7 +424,7 @@ class MainWindow(QMainWindow):
         self.ocp_check.setEnabled(True)
         missing = sorted(k for k, v in profile.items() if not v)
         if missing:
-            self._on_log("WARN", "nicht unterstuetzt: " + ", ".join(missing))
+            self._on_log("WARN", "not supported: " + ", ".join(missing))
         self._update_protection_status()
 
     @pyqtSlot(float, float)
@@ -436,8 +436,8 @@ class MainWindow(QMainWindow):
     def _on_trip(self, kind: str, value: float) -> None:
         unit = "V" if kind == "OVP" else "A"
         stamp = time.strftime("%H:%M:%S")
-        self.alarm.setText(f"{stamp}  {kind} AUSGELOEST bei {value:.3f} {unit} - "
-                           f"Ausgang abgeschaltet. Reset ueber 'Schutz zuruecksetzen'.")
+        self.alarm.setText(f"{stamp}  {kind} TRIPPED at {value:.3f} {unit} - "
+                           f"output switched off. Clear it with 'Reset protection'.")
         self.alarm.setVisible(True)
         QApplication.beep()
         self.output_btn.blockSignals(True)

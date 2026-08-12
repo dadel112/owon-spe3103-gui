@@ -197,7 +197,7 @@ class DemoTransport:
         time.sleep(0.002)
         resp = self._handle(cmd)
         if resp is None:
-            raise TimeoutError("keine Antwort (simuliert)")
+            raise TimeoutError("no response (simulated)")
         return resp
 
     def close(self) -> None:
@@ -345,13 +345,13 @@ class PsuDriver(QThread):
             if self.demo:
                 self.demo_device = DemoTransport()
                 self._transport = self.demo_device
-                self.log_message.emit("INFO", "Demo-Geraet gestartet (simuliert)")
+                self.log_message.emit("INFO", "demo device started (simulated)")
             else:
                 self._transport = VisaTransport(resource, baud, timeout_ms)
-                self.log_message.emit("INFO", f"Verbunden mit {resource} @ {baud} Bd")
+                self.log_message.emit("INFO", f"connected to {resource} @ {baud} Bd")
         except Exception as exc:
             self._transport = None
-            self.error_occurred.emit(f"Verbindung fehlgeschlagen: {exc}")
+            self.error_occurred.emit(f"connection failed: {exc}")
             self.connection_changed.emit(False)
             return
 
@@ -392,12 +392,12 @@ class PsuDriver(QThread):
         self.demo_device = None
         self._connected = False
         if not quiet:
-            self.log_message.emit("INFO", "Verbindung geschlossen")
+            self.log_message.emit("INFO", "connection closed")
             self.connection_changed.emit(False)
 
     def _fail(self, exc: Exception) -> None:
         self.error_occurred.emit(str(exc))
-        self.log_message.emit("ERROR", f"VISA-Fehler: {exc}")
+        self.log_message.emit("ERROR", f"VISA error: {exc}")
         if not self._connected or self._pending is None:
             return
         self._connected = False
@@ -411,15 +411,15 @@ class PsuDriver(QThread):
         for attempt in range(1, RECONNECT_TRIES + 1):
             if not self._running:
                 return
-            self.log_message.emit("WARN", f"Reconnect-Versuch {attempt}/{RECONNECT_TRIES}")
+            self.log_message.emit("WARN", f"reconnect attempt {attempt}/{RECONNECT_TRIES}")
             QThread.msleep(1000)
             try:
                 self._open()
                 if self._connected:
                     return
             except Exception as exc2:
-                self.log_message.emit("ERROR", f"Reconnect fehlgeschlagen: {exc2}")
-        self.error_occurred.emit("Reconnect endgueltig fehlgeschlagen")
+                self.log_message.emit("ERROR", f"reconnect failed: {exc2}")
+        self.error_occurred.emit("giving up on reconnecting")
 
     # -- Commands -------------------------------------------------------
     def _log(self, level: str, text: str) -> None:
@@ -430,7 +430,7 @@ class PsuDriver(QThread):
             return None
         template = self._profile.get(key)
         if not template:
-            self.log_message.emit("WARN", f"'{key}' vom Geraet nicht unterstuetzt")
+            self.log_message.emit("WARN", f"'{key}' not supported by this device")
             return None
         cmd = scpi_map.render(template, **kwargs) if kwargs else template
         self.log_message.emit("TX", cmd)
@@ -542,8 +542,8 @@ class PsuDriver(QThread):
         try:
             self._exec("output_off")
         except Exception as exc:
-            self.log_message.emit("ERROR", f"Not-Aus fehlgeschlagen: {exc}")
-        src = "Hardware" if hardware else "Software"
-        self.log_message.emit("ALARM", f"{src}-{kind} ausgeloest bei {value:.3f}")
+            self.log_message.emit("ERROR", f"emergency shutdown failed: {exc}")
+        src = "hardware" if hardware else "software"
+        self.log_message.emit("ALARM", f"{src} {kind} tripped at {value:.3f}")
         self.protection.mark_tripped(kind)
         self.protection_tripped.emit(kind, value)

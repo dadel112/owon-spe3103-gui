@@ -31,8 +31,8 @@ class LivePlot(QWidget):
         self._plot = pg.PlotWidget()
         self._plot.setBackground("#101418")
         self._plot.showGrid(x=True, y=True, alpha=0.25)
-        self._plot.setLabel("left", "Spannung", units="V", color="#38bdf8")
-        self._plot.setLabel("bottom", "Zeit", units="s")
+        self._plot.setLabel("left", "Voltage", units="V", color="#38bdf8")
+        self._plot.setLabel("bottom", "Time", units="s")
         self._plot.setMenuEnabled(False)
 
         self._vb2 = pg.ViewBox()
@@ -40,7 +40,7 @@ class LivePlot(QWidget):
         self._plot.plotItem.scene().addItem(self._vb2)
         self._plot.plotItem.getAxis("right").linkToView(self._vb2)
         self._vb2.setXLink(self._plot.plotItem)
-        self._plot.plotItem.getAxis("right").setLabel("Strom", units="A", color="#f59e0b")
+        self._plot.plotItem.getAxis("right").setLabel("Current", units="A", color="#f59e0b")
         self._plot.plotItem.vb.sigResized.connect(self._sync_views)
 
         self._curve_v = self._plot.plot(pen=pg.mkPen("#38bdf8", width=2))
@@ -86,7 +86,7 @@ class LivePlot(QWidget):
         self._clear_btn.clicked.connect(self.clear)
 
         bar = QHBoxLayout()
-        bar.addWidget(QLabel("Fenster:"))
+        bar.addWidget(QLabel("Window:"))
         bar.addWidget(self._win_box)
         bar.addWidget(self._auto)
         bar.addWidget(QLabel("Y-max V:"))
@@ -114,7 +114,7 @@ class LivePlot(QWidget):
 
     def _on_pause(self, on: bool) -> None:
         self._paused = on
-        self._pause_btn.setText("Weiter" if on else "Pause")
+        self._pause_btn.setText("Resume" if on else "Pause")
         if not on:
             self._redraw()
 

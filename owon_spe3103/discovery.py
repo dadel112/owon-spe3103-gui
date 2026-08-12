@@ -127,7 +127,7 @@ class Discovery:
         cached = None if demo else self._load(path)
         if cached:
             idn = cached.get("_idn", "")
-            self._log("INFO", f"SCPI-Profil geladen: {os.path.basename(path)}")
+            self._log("INFO", f"loaded SCPI profile: {os.path.basename(path)}")
             return {k: v for k, v in cached.items() if not k.startswith("_")}, idn
 
         profile: dict[str, str | None] = {}
@@ -140,7 +140,7 @@ class Discovery:
                     break
             except Exception:
                 continue
-        self._log("INFO", f"IDN: {idn or 'keine Antwort'}")
+        self._log("INFO", f"IDN: {idn or 'no response'}")
 
         for cand in scpi_map.candidates("system_error"):
             try:
@@ -182,7 +182,7 @@ class Discovery:
             profile[key] = self._first(key, lambda c, k=key: self._try_set(k, c, profile))
 
         missing = [k for k, v in profile.items() if not v]
-        self._log("INFO", f"Discovery fertig, nicht unterstuetzt: {missing or 'keine'}")
+        self._log("INFO", f"discovery done, unsupported: {missing or 'none'}")
         if not demo:
             self._save(path, profile, idn)
         return profile, idn
@@ -190,9 +190,9 @@ class Discovery:
     def _first(self, key: str, test) -> str | None:
         for cand in scpi_map.candidates(key):
             if test(cand):
-                self._log("INFO", f"{key}: '{cand}' akzeptiert")
+                self._log("INFO", f"{key}: '{cand}' accepted")
                 return cand
-        self._log("WARN", f"{key}: kein Kandidat akzeptiert")
+        self._log("WARN", f"{key}: no candidate accepted")
         return None
 
     @staticmethod
@@ -223,6 +223,6 @@ class Discovery:
         try:
             with open(path, "w", encoding="utf-8") as fh:
                 json.dump(data, fh, indent=2)
-            self._log("INFO", f"SCPI-Profil gespeichert: {os.path.basename(path)}")
+            self._log("INFO", f"saved SCPI profile: {os.path.basename(path)}")
         except OSError as exc:
-            self._log("WARN", f"Profil nicht speicherbar: {exc}")
+            self._log("WARN", f"could not save profile: {exc}")
