@@ -1,5 +1,5 @@
-"""Der Live-Plot. Spannung auf der linken Achse, Strom auf der rechten,
-gemeinsame Zeitachse - pyqtgraph braucht dafuer zwei verkoppelte ViewBoxen."""
+"""Live plot. Voltage on the left axis, current on the right, shared time axis -
+pyqtgraph needs two linked view boxes for that."""
 
 from __future__ import annotations
 
@@ -11,11 +11,11 @@ from PyQt6.QtWidgets import (QCheckBox, QComboBox, QDoubleSpinBox, QHBoxLayout,
                              QLabel, QPushButton, QVBoxLayout, QWidget)
 
 WINDOWS = [("10 s", 10), ("60 s", 60), ("5 min", 300), ("30 min", 1800)]
-MAX_POINTS = 20000          # Notbremse falls beim Trimmen mal etwas schiefgeht
+MAX_POINTS = 20000          # emergency cap in case trimming ever misses something
 
 
 class LivePlot(QWidget):
-    """Mitlaufender Plot mit Schwellenlinien und Markern fuer Ausloesungen."""
+    """Rolling plot with threshold lines and markers for trips."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -103,7 +103,7 @@ class LivePlot(QWidget):
         lay.addLayout(bar)
         self._apply_scale()
 
-    # -- Intern -------------------------------------------------------
+    # -- Internals -----------------------------------------------------
     def _sync_views(self) -> None:
         self._vb2.setGeometry(self._plot.plotItem.vb.sceneBoundingRect())
         self._vb2.linkedViewChanged(self._plot.plotItem.vb, self._vb2.XAxis)
@@ -130,8 +130,8 @@ class LivePlot(QWidget):
             self._vb2.setYRange(0, self._imax.value(), padding=0)
 
     def _trim(self) -> None:
-        """Alles aelter als das Zeitfenster fliegt raus. Laeuft auch waehrend der
-        Pause weiter, sonst waechst der Buffer im Hintergrund munter mit."""
+        """Drop everything older than the time window. Keeps running while paused,
+        otherwise the buffer would grow unnoticed in the background."""
         if not self._t:
             return
         cutoff = self._t[-1] - self._window
@@ -158,8 +158,7 @@ class LivePlot(QWidget):
 
     # -- API ----------------------------------------------------------
     def add_point(self, volt: float, amp: float, ts: float) -> None:
-        """Messpunkt anhaengen. Pause haelt nur die Anzeige an, aufgezeichnet
-        wird trotzdem weiter."""
+        """Append a sample. Pause only freezes the display, data keeps coming in."""
         if self._t0 is None:
             self._t0 = ts
         self._t.append(ts - self._t0)
@@ -171,7 +170,7 @@ class LivePlot(QWidget):
             self._trim()
 
     def mark_trip(self, volt: float, ts: float) -> None:
-        """Roten Marker am Ausloesezeitpunkt setzen."""
+        """Put a red marker at the moment of the trip."""
         if self._t0 is None:
             self._t0 = ts
         self._trips.append((ts - self._t0, volt))
@@ -179,7 +178,7 @@ class LivePlot(QWidget):
             self._redraw()
 
     def set_thresholds(self, ovp: float | None, ocp: float | None) -> None:
-        """Gestrichelte Schwellenlinien setzen (None blendet aus)."""
+        """Set the dashed threshold lines, None hides them."""
         for line, value in ((self._ovp_line, ovp), (self._ocp_line, ocp)):
             if value is None:
                 line.hide()
@@ -188,7 +187,7 @@ class LivePlot(QWidget):
                 line.show()
 
     def clear(self) -> None:
-        """Buffer und Marker leeren."""
+        """Clear buffers and markers."""
         self._t.clear()
         self._v.clear()
         self._i.clear()

@@ -1,5 +1,5 @@
-"""Das Fenster. Links die Bedienung, rechts Messwerte, Plot und Log.
-Von hier geht nichts direkt an PyVISA, alles laeuft ueber den Treiber."""
+"""The window. Controls on the left, readings, plot and log on the right.
+Nothing here talks to PyVISA directly, everything goes through the driver."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ CONFIRM_VOLT = 12.0
 
 
 class MainWindow(QMainWindow):
-    """Hauptfenster."""
+    """Main window."""
 
     def __init__(self, demo: bool = False):
         super().__init__()
@@ -43,7 +43,7 @@ class MainWindow(QMainWindow):
         self._update_protection_status()
         self._set_connected(False)
 
-    # -- UI-Aufbau ----------------------------------------------------
+    # -- Building the UI ------------------------------------------------
     def _build_ui(self) -> None:
         central = QWidget()
         root = QHBoxLayout(central)
@@ -242,7 +242,7 @@ class MainWindow(QMainWindow):
         lay.addWidget(self.log_view)
         return box
 
-    # -- Signale ------------------------------------------------------
+    # -- Signals ---------------------------------------------------------
     def _connect_signals(self) -> None:
         d = self.driver
         d.reading_ready.connect(self._on_reading)
@@ -284,7 +284,7 @@ class MainWindow(QMainWindow):
             self.demo_ovp_btn.clicked.connect(lambda: self._force_demo("ovp"))
             self.demo_ocp_btn.clicked.connect(lambda: self._force_demo("ocp"))
 
-    # -- Aktionen -----------------------------------------------------
+    # -- Actions ---------------------------------------------------------
     def _refresh_resources(self) -> None:
         current = self.res_box.currentText()
         self.res_box.clear()
@@ -374,7 +374,7 @@ class MainWindow(QMainWindow):
         self._csv_file = None
         self._csv_writer = None
 
-    # -- Slots --------------------------------------------------------
+    # -- Slots -----------------------------------------------------------
     @pyqtSlot(float, float, float, float)
     def _on_reading(self, v: float, i: float, p: float, ts: float) -> None:
         self.v_label.setText(f"{v:6.3f} V")
@@ -402,8 +402,8 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot(dict)
     def _on_profile(self, profile: dict) -> None:
-        """Was die Discovery nicht gefunden hat, wird ausgegraut und beschriftet.
-        Lieber ein sichtbar totes Feld als ein Knopf, der stillschweigend nichts tut.
+        """Grey out and label whatever discovery could not resolve. A visibly dead
+        control beats a button that silently does nothing.
         """
         def mark(widget, key: str, label: str) -> None:
             ok = bool(profile.get(key))
@@ -418,8 +418,8 @@ class MainWindow(QMainWindow):
         mark(self.prot_clear_btn, "prot_clear", "Schutz-Reset")
         mark(self.remote_btn, "remote", "Remote")
         mark(self.local_btn, "local", "Local")
-        # Die Haken bleiben trotzdem bedienbar - ohne Hardware-Schutz greift
-        # eben nur die Software-Ueberwachung.
+        # The checkboxes stay usable either way, without device-side protection
+        # only the software watchdog applies.
         self.ovp_check.setEnabled(True)
         self.ocp_check.setEnabled(True)
         missing = sorted(k for k, v in profile.items() if not v)
@@ -450,7 +450,7 @@ class MainWindow(QMainWindow):
     def _on_log(self, level: str, text: str) -> None:
         self.log_view.appendPlainText(f"{time.strftime('%H:%M:%S')} [{level}] {text}")
 
-    # -- Ende ---------------------------------------------------------
+    # -- Shutdown --------------------------------------------------------
     def closeEvent(self, event) -> None:
         self._close_csv()
         self.driver.stop()

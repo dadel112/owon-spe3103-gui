@@ -1,6 +1,6 @@
-"""Herausfinden, welche SCPI-Schreibweise das Geraet tatsaechlich versteht.
-Die Kandidaten aus scpi_map werden der Reihe nach ausprobiert, was durchgeht
-landet in scpi_profile.json und wird beim naechsten Start einfach geladen.
+"""Works out which SCPI spelling the device actually understands.
+The candidates from scpi_map are tried in order, whatever gets through is stored
+in scpi_profile.json and simply loaded on the next start.
 """
 
 from __future__ import annotations
@@ -15,15 +15,15 @@ PROFILE_NAME = "scpi_profile.json"
 
 
 def profile_path() -> str:
-    """Pfad zu scpi_profile.json neben main.py."""
+    """Path to scpi_profile.json next to main.py (or the exe)."""
     base = os.path.dirname(os.path.abspath(sys.argv[0])) if sys.argv and sys.argv[0] else os.getcwd()
     return os.path.join(base, PROFILE_NAME)
 
 
 class Discovery:
-    """Probiert die Kandidaten durch und nimmt den ersten, den das Geraet akzeptiert.
-    Schreibende Befehle nur bei ausgeschaltetem Ausgang, und wo es geht wird der
-    Wert danach zurueckgelesen statt dem Geraet einfach zu glauben.
+    """Tries the candidates and keeps the first one the device accepts.
+    Writes happen only with the output off, and where possible the value is read
+    back afterwards instead of taking the device's word for it.
     """
 
     def __init__(self, transport, log=None):
@@ -31,7 +31,7 @@ class Discovery:
         self._log = log or (lambda level, text: None)
         self._err_cmd = ""
 
-    # -- Hilfen -------------------------------------------------------
+    # -- Helpers -------------------------------------------------------
     def _write(self, cmd: str) -> None:
         self._log("TX", cmd)
         self._t.write(cmd)
@@ -60,8 +60,8 @@ class Discovery:
             return 0
 
     def _accepted(self) -> bool:
-        """Fehlerspeicher abfragen. Kennt das Geraet die Abfrage nicht, muss
-        uns 'hat nicht getimeoutet' als Beweis reichen."""
+        """Read the error queue. If the device does not know that query either,
+        'did not time out' has to count as proof."""
         if not self._err_cmd:
             return True
         try:
@@ -77,7 +77,7 @@ class Discovery:
         except (ValueError, IndexError):
             return False
 
-    # -- Einzeltests --------------------------------------------------
+    # -- Single probes -------------------------------------------------
     def _try_query(self, cand: str, numeric: bool) -> bool:
         try:
             resp = self._query(cand)
@@ -111,7 +111,7 @@ class Discovery:
         rb_key = scpi_map.READBACK.get(key)
         rb_cmd = profile.get(rb_key) if rb_key else None
         if not rb_cmd:
-            return True                   # ohne Readback gilt Fehlerfreiheit
+            return True                   # no readback available, absence of errors has to do
         try:
             value = float(self._query(rb_cmd).split(",")[0])
         except Exception:
@@ -120,9 +120,9 @@ class Discovery:
         target = float(next(iter(args.values()), 0.0))
         return abs(value - target) <= max(0.05, target * 0.02)
 
-    # -- Ablauf -------------------------------------------------------
+    # -- Main sequence -------------------------------------------------
     def run(self, path: str, demo: bool = False) -> tuple[dict, str]:
-        """Profil laden oder ermitteln. Liefert (profil, idn)."""
+        """Load the cached profile or probe for one. Returns (profile, idn)."""
         idn = ""
         cached = None if demo else self._load(path)
         if cached:
@@ -152,7 +152,7 @@ class Discovery:
                 continue
         self._clear_errors()
 
-        # Die Abfragen zuerst, weil die Sets sie spaeter zum Nachpruefen brauchen.
+        # Queries first, the set probes need them later to verify their writes.
         query_keys = ["measure_volt", "measure_curr", "measure_power",
                       "get_volt_set", "get_curr_set", "output_state",
                       "ovp_get", "ocp_get", "ovp_tripped", "ocp_tripped"]
@@ -164,7 +164,7 @@ class Discovery:
         for key in query_keys:
             profile[key] = self._first(key, lambda c: self._try_query(c, True))
 
-        # Ab hier wird geschrieben, also vorher den Ausgang stilllegen.
+        # Writing starts here, so kill the output first.
         off = self._first("output_off", self._try_write)
         profile["output_off"] = off
 
@@ -172,8 +172,8 @@ class Discovery:
             if key == "output_off":
                 continue
             if key == "output_on":
-                # Einschalten zum Testen kommt nicht in Frage. Also den Kandidaten
-                # nehmen, der zum akzeptierten Ausschalt-Befehl passt.
+                # Switching on just to test it is not an option, so take the
+                # candidate that matches the accepted off command.
                 profile[key] = self._pair_with(key, off)
                 continue
             profile[key] = self._first(key, self._try_write)
@@ -197,7 +197,7 @@ class Discovery:
 
     @staticmethod
     def _pair_with(key: str, reference: str | None) -> str | None:
-        """Nimmt den Kandidaten mit gleichem Index wie der akzeptierte Gegenbefehl."""
+        """Take the candidate at the same index as the accepted counterpart."""
         cands = scpi_map.candidates(key)
         off = scpi_map.candidates("output_off")
         if not cands:
@@ -208,7 +208,7 @@ class Discovery:
                 return cands[idx]
         return cands[0]
 
-    # -- Persistenz ---------------------------------------------------
+    # -- Persistence ---------------------------------------------------
     def _load(self, path: str) -> dict | None:
         try:
             with open(path, "r", encoding="utf-8") as fh:

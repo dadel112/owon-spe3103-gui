@@ -1,5 +1,5 @@
-"""Startet die Anwendung. Mit --demo laeuft alles gegen ein simuliertes Netzteil,
-dafuer braucht es weder Hardware noch einen freien COM-Port."""
+"""Starts the application. With --demo everything runs against a simulated
+supply, no hardware and no free COM port required."""
 
 import argparse
 import sys

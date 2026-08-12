@@ -1,6 +1,6 @@
-"""Alles was mit dem Netzteil redet.
-PyVISA wird ausschliesslich aus dem QThread hier drin angefasst, die GUI schickt
-nur Jobs in die Queue. Der Demo-Transport unten ersetzt die Hardware zum Testen.
+"""Everything that talks to the power supply.
+PyVISA is touched only from the QThread in here, the GUI just pushes jobs into
+the queue. The demo transport further down replaces the hardware for testing.
 """
 
 from __future__ import annotations
@@ -30,11 +30,11 @@ RECONNECT_TRIES = 3
 
 
 # --------------------------------------------------------------------------
-# Transporte
+# Transports
 # --------------------------------------------------------------------------
 
 class VisaTransport:
-    """Duenner Wrapper um eine PyVISA-Ressource."""
+    """Thin wrapper around a PyVISA resource."""
 
     def __init__(self, resource: str, baud: int = DEFAULT_BAUD,
                  timeout_ms: int = DEFAULT_TIMEOUT_MS):
@@ -64,9 +64,9 @@ class VisaTransport:
 
 
 class DemoTransport:
-    """Netzteil-Attrappe fuer --demo. Versteht absichtlich nur den jeweils ersten
-    Kandidaten aus scpi_map, damit man im GUI auch mal ein 'nicht unterstuetzt'
-    zu sehen bekommt. Die Befehle werden aus der Map abgeleitet, nicht hier getippt.
+    """Stand-in power supply for --demo. Deliberately understands only the first
+    candidate per function so the GUI actually shows an unsupported control now
+    and then. Commands are derived from scpi_map, not typed out here.
     """
 
     UNSUPPORTED = {"measure_power"}
@@ -100,8 +100,8 @@ class DemoTransport:
         if not self.output or self.tripped:
             return 0.0, 0.0
         t = time.time() - self._t0
-        # Etwas Welligkeit auf der Spannung, dazu eine langsam atmende Last -
-        # sieht im Plot lebendiger aus als eine gerade Linie.
+        # A bit of ripple on the voltage plus a slowly breathing load, which
+        # looks more alive in the plot than a straight line.
         v = self.v_set * (1.0 + 0.004 * math.sin(t * 1.7)) + random.uniform(-0.004, 0.004)
         load = 6.0 + 1.5 * math.sin(t * 0.4)
         i = min(self.i_set, max(0.0, v / load)) + random.uniform(-0.002, 0.002)
@@ -119,7 +119,7 @@ class DemoTransport:
             self.output = False
         return v, i
 
-    # -- Befehlsdispatch ----------------------------------------------
+    # -- Command dispatch ----------------------------------------------
     def _resolve(self, cmd: str) -> tuple[str, float | None]:
         norm = cmd.strip().upper()
         if norm in self._exact:
@@ -205,7 +205,7 @@ class DemoTransport:
 
 
 def list_resources() -> list[str]:
-    """Verfuegbare VISA-Ressourcen (leer bei Fehler)."""
+    """Available VISA resources, empty list on any error."""
     try:
         import pyvisa
         rm = pyvisa.ResourceManager("@py")
@@ -217,13 +217,13 @@ def list_resources() -> list[str]:
 
 
 # --------------------------------------------------------------------------
-# Kommando-Queue
+# Command queue
 # --------------------------------------------------------------------------
 
 @dataclass(order=True)
 class _Job:
-    # seq haelt die Reihenfolge innerhalb einer Prioritaet stabil und verhindert,
-    # dass die PriorityQueue bei Gleichstand ueber die restlichen Felder vergleicht.
+    # seq keeps the order stable within one priority and stops PriorityQueue
+    # from falling back to comparing the remaining fields on a tie.
     priority: int
     seq: int
     key: str = field(compare=False, default="")
@@ -234,8 +234,8 @@ class _Job:
 
 
 class PsuDriver(QThread):
-    """Der Arbeiter: haelt die Verbindung, arbeitet die Queue ab, pollt Messwerte
-    und schaut dabei nach, ob eine Schutzschwelle gerissen ist.
+    """The worker: holds the connection, drains the queue, polls readings and
+    checks whether a protection threshold was crossed.
     """
 
     reading_ready = pyqtSignal(float, float, float, float)   # v, i, p, ts
@@ -265,7 +265,7 @@ class PsuDriver(QThread):
         self._connected = False
         self._trip_reported = ""
 
-    # -- API aus dem GUI-Thread ---------------------------------------
+    # -- API called from the GUI thread ---------------------------------
     def _put(self, prio: int, **kw) -> None:
         self._seq += 1
         self._q.put(_Job(prio, self._seq, **kw))
@@ -291,7 +291,7 @@ class PsuDriver(QThread):
         self._poll_ms = max(POLL_MIN_MS, min(POLL_MAX_MS, int(ms)))
 
     def supports(self, key: str) -> bool:
-        """True wenn Discovery diese Funktion aufgeloest hat."""
+        """True if discovery resolved this function."""
         return bool(self._profile.get(key))
 
     def profile(self) -> dict:
@@ -303,8 +303,8 @@ class PsuDriver(QThread):
 
     # -- Thread -------------------------------------------------------
     def run(self) -> None:
-        # Kurzes Queue-Timeout statt blockierendem get(), sonst kaeme das Polling
-        # nie dran solange niemand etwas anklickt.
+        # Short queue timeout instead of a blocking get(), otherwise polling
+        # would never get a turn while nobody clicks anything.
         while self._running:
             try:
                 job = self._q.get(timeout=0.02)
@@ -335,7 +335,7 @@ class PsuDriver(QThread):
         elif job.key:
             self._exec(job.key, **job.kwargs)
 
-    # -- Verbindung ---------------------------------------------------
+    # -- Connection -----------------------------------------------------
     def _open(self) -> None:
         if self._pending is None:
             return
@@ -366,7 +366,7 @@ class PsuDriver(QThread):
             ocp_trip=self.supports("ocp_tripped"),
         )
         self._exec("remote")
-        self._exec("output_off")          # nie automatisch einschalten
+        self._exec("output_off")          # never switch on by itself
         self._read_setpoints()
         self._connected = True
         self._trip_reported = ""
@@ -374,8 +374,8 @@ class PsuDriver(QThread):
         self.connection_changed.emit(True)
 
     def _shutdown(self, quiet: bool = False) -> None:
-        # Reihenfolge ist wichtig: erst stromlos, dann Bedienung ans Geraet zurueck,
-        # erst danach die Schnittstelle zumachen.
+        # Order matters: output off first, then hand control back to the front
+        # panel, and only then close the port.
         if self._transport is None:
             self._connected = False
             return
@@ -421,7 +421,7 @@ class PsuDriver(QThread):
                 self.log_message.emit("ERROR", f"Reconnect fehlgeschlagen: {exc2}")
         self.error_occurred.emit("Reconnect endgueltig fehlgeschlagen")
 
-    # -- Kommandos ----------------------------------------------------
+    # -- Commands -------------------------------------------------------
     def _log(self, level: str, text: str) -> None:
         self.log_message.emit(level, text)
 
@@ -467,7 +467,7 @@ class PsuDriver(QThread):
         if v is not None or i is not None:
             self.setpoints_read.emit(v or 0.0, i or 0.0)
 
-    # -- Sollwerte / Schutz (geklemmt) --------------------------------
+    # -- Setpoints and protection, all clamped --------------------------
     def apply_voltage(self, volt: float) -> None:
         v = max(0.0, min(scpi_map.V_MAX, float(volt)))
         self.send("set_volt", v=v)
@@ -512,8 +512,8 @@ class PsuDriver(QThread):
         p = v * i
         self.reading_ready.emit(v, i, p, ts)
 
-        # Erst das Geraet fragen, falls es Trip-Flags kennt. Danach in jedem Fall
-        # noch selbst nachrechnen - doppelt haelt besser.
+        # Ask the device first if it knows trip flags, then check locally
+        # anyway. Two layers are cheap here.
         state = self.protection
         hw_trip = ""
         if state.hw_ovp_trip:
@@ -538,7 +538,7 @@ class PsuDriver(QThread):
         self.mode_changed.emit(state.mode_hint(v, i))
 
     def _emergency(self, kind: str, value: float, hardware: bool) -> None:
-        """Abschalten ohne Umweg ueber die Queue - wir sind hier schon im Worker."""
+        """Shut down without going through the queue, this already runs in the worker."""
         try:
             self._exec("output_off")
         except Exception as exc:
