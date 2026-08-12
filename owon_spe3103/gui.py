@@ -35,6 +35,9 @@ class MainWindow(QMainWindow):
         self._csv_file = None
         self._csv_writer = None
         self._output_on = False
+        self._latched = False       # trip waiting to be acknowledged
+        self._connected = False
+        self._applied: tuple | None = None   # protection values the driver runs on
 
         self._build_ui()
         self._connect_signals()
@@ -129,13 +132,16 @@ class MainWindow(QMainWindow):
         self.ovp_spin = QDoubleSpinBox()
         self.ovp_spin.setRange(0.0, scpi_map.OVP_MAX)
         self.ovp_spin.setDecimals(2)
-        self.ovp_spin.setValue(scpi_map.OVP_MAX)
+        # Default to the nameplate rating, not to the clamp maximum: 33 V is
+        # above what the supply can put out, so protection armed at that value
+        # would never fire.
+        self.ovp_spin.setValue(scpi_map.V_MAX)
         self.ovp_spin.setSuffix(" V")
         self.ovp_check = QCheckBox("OVP armed")
         self.ocp_spin = QDoubleSpinBox()
         self.ocp_spin.setRange(0.0, scpi_map.OCP_MAX)
         self.ocp_spin.setDecimals(2)
-        self.ocp_spin.setValue(scpi_map.OCP_MAX)
+        self.ocp_spin.setValue(scpi_map.I_MAX)
         self.ocp_spin.setSuffix(" A")
         self.ocp_check = QCheckBox("OCP armed")
         self.delay_spin = QSpinBox()
@@ -255,6 +261,7 @@ class MainWindow(QMainWindow):
         d.raw_response.connect(lambda s: self.raw_edit.setToolTip(s))
         d.mode_changed.connect(self.mode_label.setText)
         d.setpoints_read.connect(self._on_setpoints)
+        d.output_blocked.connect(self._on_output_blocked)
 
         self.refresh_btn.clicked.connect(self._refresh_resources)
         self.connect_btn.clicked.connect(self._do_connect)
@@ -270,6 +277,11 @@ class MainWindow(QMainWindow):
         self.raw_query_btn.clicked.connect(lambda: d.send_raw(self.raw_edit.text(), True))
         self.csv_btn.toggled.connect(self._on_csv_toggle)
         self.delay_spin.valueChanged.connect(d.protection.set_delay)
+        # Thresholds and arming only take effect on 'Apply protection'. Say so
+        # instead of letting the panel imply a protection that is not armed yet.
+        for signal in (self.ovp_spin.valueChanged, self.ocp_spin.valueChanged,
+                       self.ovp_check.toggled, self.ocp_check.toggled):
+            signal.connect(lambda *_: self._refresh_protection_dirty())
 
         self.v_spin.valueChanged.connect(
             lambda v: self.v_slider.setValue(int(round(v * 1000))))
@@ -314,17 +326,44 @@ class MainWindow(QMainWindow):
         self.plot.set_thresholds(
             self.ovp_spin.value() if self.ovp_check.isChecked() else None,
             self.ocp_spin.value() if self.ocp_check.isChecked() else None)
+        self._applied = self._protection_fields()
+        self._refresh_protection_dirty()
+        self.driver.warn_unreachable_protection()
         self._update_protection_status()
+
+    def _protection_fields(self) -> tuple:
+        return (round(self.ovp_spin.value(), 2), self.ovp_check.isChecked(),
+                round(self.ocp_spin.value(), 2), self.ocp_check.isChecked())
+
+    def _refresh_protection_dirty(self) -> None:
+        """Highlight 'Apply protection' while the fields differ from what the
+        watchdog actually runs on - a ticked box on its own protects nothing."""
+        if self._applied is None:
+            dirty = self.ovp_check.isChecked() or self.ocp_check.isChecked()
+        else:
+            dirty = self._applied != self._protection_fields()
+        self.prot_apply_btn.setText(
+            "Apply protection (pending)" if dirty else "Apply protection")
+        self.prot_apply_btn.setStyleSheet(
+            "font-weight:bold; background:#b45309; color:white;" if dirty else "")
 
     def _clear_protection(self) -> None:
         self.driver.clear_protection()
+        self._latched = False
         self.alarm.setVisible(False)
+        self.output_btn.setEnabled(self._connected)
         self._update_protection_status()
 
     def _update_protection_status(self) -> None:
         self.prot_status.setText(self.driver.protection.stage_text())
 
     def _on_output_toggle(self, on: bool) -> None:
+        if on and self._latched:
+            QMessageBox.warning(self, "Protection tripped",
+                                "A trip is still latched. Clear it with "
+                                "'Reset protection' before switching on again.")
+            self.output_btn.setChecked(False)
+            return
         if on and self.v_spin.value() > CONFIRM_VOLT:
             answer = QMessageBox.question(
                 self, "Switch output on",
@@ -390,9 +429,18 @@ class MainWindow(QMainWindow):
         self.status_dot.setStyleSheet(f"color:{'#16a34a' if ok else '#94a3b8'};")
         self.connect_btn.setEnabled(not ok)
         self.disconnect_btn.setEnabled(ok)
+        self._connected = ok
         for w in (self.apply_btn, self.output_btn, self.prot_apply_btn,
                   self.prot_clear_btn, self.raw_send_btn, self.raw_query_btn):
             w.setEnabled(ok)
+        if ok:
+            # The driver clears a leftover trip when it connects.
+            self._latched = False
+            self.alarm.setVisible(False)
+            # Nothing is armed on a fresh connection, whatever the fields show.
+            self._applied = None
+            self._refresh_protection_dirty()
+            self._update_protection_status()
         if not ok:
             self.output_btn.blockSignals(True)
             self.output_btn.setChecked(False)
@@ -440,11 +488,28 @@ class MainWindow(QMainWindow):
                            f"output switched off. Clear it with 'Reset protection'.")
         self.alarm.setVisible(True)
         QApplication.beep()
+        self._latched = True
+        self._output_on = False
         self.output_btn.blockSignals(True)
         self.output_btn.setChecked(False)
         self.output_btn.blockSignals(False)
         self._style_output(False)
-        self.plot.mark_trip(value if kind == "OVP" else value, time.time())
+        # The watchdog does not evaluate anything while latched, so the output
+        # stays locked until the trip is acknowledged.
+        self.output_btn.setEnabled(False)
+        self._update_protection_status()
+        self.plot.mark_trip(value, time.time())
+
+    @pyqtSlot(str)
+    def _on_output_blocked(self, reason: str) -> None:
+        """The driver refused to switch the output on."""
+        self._latched = True
+        self.output_btn.blockSignals(True)
+        self.output_btn.setChecked(False)
+        self.output_btn.blockSignals(False)
+        self._style_output(False)
+        self.output_btn.setEnabled(False)
+        self._on_log("WARN", reason)
 
     @pyqtSlot(str, str)
     def _on_log(self, level: str, text: str) -> None:

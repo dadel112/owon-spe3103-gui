@@ -248,6 +248,7 @@ class PsuDriver(QThread):
     raw_response = pyqtSignal(str)
     mode_changed = pyqtSignal(str)                           # CV / CC / --
     setpoints_read = pyqtSignal(float, float)                # v_set, i_set
+    output_blocked = pyqtSignal(str)                         # reason
 
     def __init__(self, demo: bool = False, parent=None):
         super().__init__(parent)
@@ -333,7 +334,32 @@ class PsuDriver(QThread):
         elif job.action == "raw":
             self._raw(job.raw, job.raw_query)
         elif job.key:
+            # A latched trip switches the software watchdog off, so an output
+            # that comes back on would run entirely unprotected. Refuse until
+            # the trip has been acknowledged.
+            if job.key == "output_on" and self.protection.is_latched():
+                reason = (f"{self.protection.tripped} is still latched - "
+                          f"reset the protection before switching the output on")
+                self.log_message.emit("WARN", reason)
+                self.output_blocked.emit(reason)
+                return
             self._exec(job.key, **job.kwargs)
+
+    def _purge_queue(self) -> None:
+        """Drop everything that is still queued but not an emergency. After a trip
+        a pending 'output_on' would otherwise be executed right after the
+        shutdown and energise the output again."""
+        kept: list[_Job] = []
+        while True:
+            try:
+                job = self._q.get_nowait()
+            except queue.Empty:
+                break
+            if job.priority <= PRIO_EMERGENCY or \
+                    job.action in ("quit", "disconnect", "connect"):
+                kept.append(job)
+        for job in kept:
+            self._q.put(job)
 
     # -- Connection -----------------------------------------------------
     def _open(self) -> None:
@@ -369,6 +395,9 @@ class PsuDriver(QThread):
         self._exec("output_off")          # never switch on by itself
         self._read_setpoints()
         self._connected = True
+        # A trip left over from an earlier session would keep the watchdog
+        # disabled on this connection.
+        self.protection.reset()
         self._trip_reported = ""
         self._next_poll = 0.0
         self.connection_changed.emit(True)
@@ -464,12 +493,19 @@ class PsuDriver(QThread):
     def _read_setpoints(self) -> None:
         v = self._num("get_volt_set")
         i = self._num("get_curr_set")
+        # The protection needs the setpoints too: for the CV/CC guess and to
+        # judge whether a threshold can be reached at all.
+        if v is not None:
+            self.protection.set_setpoint_voltage(v)
+        if i is not None:
+            self.protection.set_setpoint_current(i)
         if v is not None or i is not None:
             self.setpoints_read.emit(v or 0.0, i or 0.0)
 
     # -- Setpoints and protection, all clamped --------------------------
     def apply_voltage(self, volt: float) -> None:
         v = max(0.0, min(scpi_map.V_MAX, float(volt)))
+        self.protection.set_setpoint_voltage(v)
         self.send("set_volt", v=v)
 
     def apply_current(self, amp: float) -> None:
@@ -497,6 +533,11 @@ class PsuDriver(QThread):
         elif not enabled and self.supports("ocp_disable"):
             self.send("ocp_disable")
 
+    def warn_unreachable_protection(self) -> None:
+        """Log thresholds that cannot be reached in normal operation."""
+        for text in self.protection.reachability_warnings():
+            self.log_message.emit("WARN", text)
+
     def clear_protection(self) -> None:
         self.protection.reset()
         self._trip_reported = ""
@@ -513,14 +554,16 @@ class PsuDriver(QThread):
         self.reading_ready.emit(v, i, p, ts)
 
         # Ask the device first if it knows trip flags, then check locally
-        # anyway. Two layers are cheap here.
+        # anyway. Two layers are cheap here - but only ask for a flag that is
+        # armed, each query delays the next measurement and with it the
+        # watchdog.
         state = self.protection
         hw_trip = ""
-        if state.hw_ovp_trip:
+        if state.wants_trip_query("OVP"):
             r = self._exec("ovp_tripped")
             if r and r.strip().startswith("1"):
                 hw_trip = "OVP"
-        if not hw_trip and state.hw_ocp_trip:
+        if not hw_trip and state.wants_trip_query("OCP"):
             r = self._exec("ocp_tripped")
             if r and r.strip().startswith("1"):
                 hw_trip = "OCP"
@@ -529,7 +572,9 @@ class PsuDriver(QThread):
             self._emergency(hw_trip, v if hw_trip == "OVP" else i, hardware=True)
             return
 
-        sw = state.check(v, i, ts)
+        # The trip delay is timed on the monotonic clock, `ts` is only the
+        # wall-clock stamp for plot and CSV.
+        sw = state.check(v, i, time.monotonic())
         if sw and self._trip_reported != sw[0]:
             self._trip_reported = sw[0]
             self._emergency(sw[0], sw[1], hardware=False)
@@ -539,11 +584,13 @@ class PsuDriver(QThread):
 
     def _emergency(self, kind: str, value: float, hardware: bool) -> None:
         """Shut down without going through the queue, this already runs in the worker."""
+        self.protection.mark_tripped(kind)
+        self._purge_queue()
         try:
             self._exec("output_off")
         except Exception as exc:
             self.log_message.emit("ERROR", f"emergency shutdown failed: {exc}")
+        self.mode_changed.emit("--")
         src = "hardware" if hardware else "software"
         self.log_message.emit("ALARM", f"{src} {kind} tripped at {value:.3f}")
-        self.protection.mark_tripped(kind)
         self.protection_tripped.emit(kind, value)

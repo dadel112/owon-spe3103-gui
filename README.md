@@ -57,7 +57,17 @@ A software watchdog runs on top of that at all times. It compares every reading 
 thresholds and jumps the command queue with a shutdown when one is exceeded. Trip delay is
 configurable from 0 to 2000 ms so inrush peaks do not trigger it.
 
-Reset is manual only, via the reset button.
+The delay integrates the time spent above the threshold instead of restarting the clock on every
+sample below it; time below pays it back at half the rate. A load that keeps crossing the limit
+therefore still trips, a single peak still does not.
+
+Thresholds only take effect on "Apply protection" — the button is highlighted while the fields
+differ from what the watchdog is running on. A threshold above the setpoint (or above the device
+rating) can never be reached in normal operation and is called out in the log.
+
+Reset is manual only, via the reset button. While a trip is latched the watchdog does not evaluate
+anything, so the output stays locked until it is acknowledged: the button is disabled, a queued
+`output_on` is dropped, and the driver refuses the command as a second line of defence.
 
 The software stage can only react as fast as the poll interval allows (100–2000 ms). It is a
 convenience, not a fuse, and no substitute for real hardware protection.
@@ -73,6 +83,12 @@ owon_spe3103/
   protection.py          thresholds and software watchdog
   gui.py                 window and controls
   plot.py                live plot
+tests/
+  test_protection.py     watchdog logic, no Qt and no device needed
+```
+
+```
+python tests/test_protection.py
 ```
 
 The GUI never touches PyVISA. Everything goes through a queue into the worker thread, with a
