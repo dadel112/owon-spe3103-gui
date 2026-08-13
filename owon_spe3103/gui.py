@@ -1,25 +1,33 @@
 """The window. Controls on the left, readings, plot and log on the right.
-Nothing here talks to PyVISA directly, everything goes through the driver."""
+Nothing here talks to PyVISA directly, everything goes through the driver.
+
+Dressed in the Bench95 design system (design/bench95): grey chrome, 1px bevels,
+11px UI type, LED readouts, indicator lamps and an etched status bar. The
+styling lives in theme.py and widgets.py - this file only lays things out.
+"""
 
 from __future__ import annotations
 
 import csv
 import time
 
-from PyQt6.QtCore import Qt, pyqtSlot
-from PyQt6.QtGui import QFont
+from PyQt6.QtCore import QSize, Qt, pyqtSlot
+from PyQt6.QtGui import QAction, QKeySequence
 from PyQt6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDoubleSpinBox,
-                             QFileDialog, QFormLayout, QFrame, QGridLayout,
+                             QFileDialog, QFormLayout, QGridLayout,
                              QGroupBox, QHBoxLayout, QLabel, QLineEdit,
                              QMainWindow, QMessageBox, QPlainTextEdit,
-                             QPushButton, QSlider, QSpinBox, QVBoxLayout, QWidget)
+                             QPushButton, QScrollArea, QSlider, QSpinBox,
+                             QStatusBar, QToolBar, QVBoxLayout, QWidget)
 
-from . import scpi_map
+from . import scpi_map, theme
 from .driver import DEFAULT_BAUD, DEFAULT_POLL_MS, PsuDriver, list_resources
 from .plot import LivePlot
+from .widgets import Led, LedReadout, StatusPane
 
 BAUDS = [9600, 19200, 38400, 57600, 115200]
 CONFIRM_VOLT = 12.0
+MODEL = "SPE3103"
 
 
 class MainWindow(QMainWindow):
@@ -29,7 +37,6 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.demo = demo
         self.setWindowTitle("OWON SPE3103" + (" - DEMO" if demo else ""))
-        self.resize(1180, 820)
 
         self.driver = PsuDriver(demo=demo)
         self._csv_file = None
@@ -40,6 +47,7 @@ class MainWindow(QMainWindow):
         self._applied: tuple | None = None   # protection values the driver runs on
 
         self._build_ui()
+        self._resize_to_screen()
         self._connect_signals()
         self.driver.start()
         self._refresh_resources()
@@ -47,14 +55,47 @@ class MainWindow(QMainWindow):
         self._set_connected(False)
 
     # -- Building the UI ------------------------------------------------
+    def _resize_to_screen(self) -> None:
+        """Open wide enough for the panel, and never larger than the display.
+
+        The panel is sized in design pixels, which the theme has already
+        stretched for this screen; on a laptop that can leave it larger than
+        the desktop, and a window bigger than the screen puts its own bottom
+        edge - the Output group and the status bar - out of reach. Clamping
+        here and scrolling the rest beats hanging off the edge.
+        """
+        need = self._panel.minimumSizeHint()
+        want = QSize(max(theme.px(1180), need.width() + theme.SCROLLBAR),
+                     theme.px(820))
+        screen = self.screen() or QApplication.primaryScreen()
+        if screen is not None:
+            avail = screen.availableGeometry()
+            want.setWidth(min(want.width(), int(avail.width() * 0.95)))
+            want.setHeight(min(want.height(), int(avail.height() * 0.95)))
+        self.resize(want)
+
     def _build_ui(self) -> None:
-        central = QWidget()
-        root = QHBoxLayout(central)
+        self._build_menus()
+        self._build_toolbar()
+
+        self._panel = QWidget()
+        root = QHBoxLayout(self._panel)
+        root.setContentsMargins(theme.SPACE_8, theme.SPACE_8,
+                                theme.SPACE_8, theme.SPACE_8)
+        root.setSpacing(theme.SPACE_8)
         left = QVBoxLayout()
+        left.setSpacing(theme.SPACE_8)
         right = QVBoxLayout()
+        right.setSpacing(theme.SPACE_8)
         root.addLayout(left, 0)
         root.addLayout(right, 1)
-        self.setCentralWidget(central)
+        # The panel keeps its natural size and the window scrolls to it when it
+        # has to. Held directly, the window could not shrink past the height of
+        # the control stack, so a short display simply cut the bottom off.
+        scroller = QScrollArea()
+        scroller.setWidget(self._panel)
+        scroller.setWidgetResizable(True)
+        self.setCentralWidget(scroller)
 
         left.addWidget(self._build_connection())
         left.addWidget(self._build_setpoints())
@@ -68,12 +109,86 @@ class MainWindow(QMainWindow):
         right.addWidget(self._build_misc())
         right.addWidget(self._build_log(), 1)
 
+        self._build_statusbar()
+        # Runs last: it touches the readouts, the lamp and the status pane, so
+        # every one of them has to exist first.
+        self._style_output(False)
+
+    def _build_menus(self) -> None:
+        """Title Case menu titles, sentence case items, ellipsis where a dialog
+        follows - the system's own casing rules."""
+        bar = self.menuBar()
+
+        file_menu = bar.addMenu("&File")
+        self.act_record = QAction("&Record CSV…", self)
+        self.act_record.setCheckable(True)
+        self.act_record.setShortcut(QKeySequence("Ctrl+R"))
+        file_menu.addAction(self.act_record)
+        file_menu.addSeparator()
+        act_exit = QAction("E&xit", self)
+        act_exit.triggered.connect(self.close)
+        file_menu.addAction(act_exit)
+
+        dev = bar.addMenu("&Device")
+        self.act_connect = QAction("&Connect", self)
+        self.act_connect.setShortcut(QKeySequence("F2"))
+        self.act_disconnect = QAction("&Disconnect", self)
+        self.act_apply = QAction("&Apply setpoints", self)
+        self.act_apply.setShortcut(QKeySequence("F4"))
+        self.act_reset = QAction("Reset &protection", self)
+        self.act_remote = QAction("Re&mote", self)
+        self.act_local = QAction("&Local", self)
+        dev.addAction(self.act_connect)
+        dev.addAction(self.act_disconnect)
+        dev.addSeparator()
+        dev.addAction(self.act_apply)
+        dev.addAction(self.act_reset)
+        dev.addSeparator()
+        dev.addAction(self.act_remote)
+        dev.addAction(self.act_local)
+
+        help_menu = bar.addMenu("&Help")
+        act_about = QAction("&About OWON SPE3103", self)
+        act_about.triggered.connect(self._about)
+        help_menu.addAction(act_about)
+
+    def _build_toolbar(self) -> None:
+        bar = QToolBar("Main", self)
+        bar.setMovable(False)
+        bar.setFloatable(False)
+        bar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
+        bar.addAction(self.act_connect)
+        bar.addAction(self.act_disconnect)
+        bar.addSeparator()
+        bar.addAction(self.act_apply)
+        bar.addAction(self.act_reset)
+        bar.addSeparator()
+        bar.addAction(self.act_record)
+        bar.addAction(self.act_remote)
+        bar.addAction(self.act_local)
+        self.addToolBar(bar)
+
+    def _build_statusbar(self) -> None:
+        """Etched panes along the bottom edge, two words maximum each."""
+        bar = QStatusBar()
+        bar.setSizeGripEnabled(False)
+        self.pane_state = StatusPane("Not connected", grow=True)
+        self.pane_mode = StatusPane("--", width=40)
+        self.pane_link = StatusPane("—", width=170)
+        self.pane_model = StatusPane(MODEL, width=80)
+        for pane in (self.pane_state, self.pane_mode, self.pane_link,
+                     self.pane_model):
+            bar.addWidget(pane, 1 if pane is self.pane_state else 0)
+        self.setStatusBar(bar)
+
     def _build_connection(self) -> QGroupBox:
         box = QGroupBox("Connection")
         lay = QGridLayout(box)
+        lay.setHorizontalSpacing(theme.SPACE_6)
+        lay.setVerticalSpacing(theme.SPACE_4)
         self.res_box = QComboBox()
         self.res_box.setEditable(True)
-        self.res_box.setMinimumWidth(230)
+        self.res_box.setMinimumWidth(theme.px(230))
         self.refresh_btn = QPushButton("Refresh")
         self.baud_box = QComboBox()
         for b in BAUDS:
@@ -81,7 +196,7 @@ class MainWindow(QMainWindow):
         self.baud_box.setCurrentText(str(DEFAULT_BAUD))
         self.connect_btn = QPushButton("Connect")
         self.disconnect_btn = QPushButton("Disconnect")
-        self.status_dot = QLabel("● disconnected")
+        self.status_dot = QLabel("Not connected")
         self.idn_label = QLabel("IDN: -")
         self.idn_label.setWordWrap(True)
 
@@ -99,6 +214,8 @@ class MainWindow(QMainWindow):
     def _build_setpoints(self) -> QGroupBox:
         box = QGroupBox("Setpoints")
         lay = QGridLayout(box)
+        lay.setHorizontalSpacing(theme.SPACE_6)
+        lay.setVerticalSpacing(theme.SPACE_4)
         self.v_spin = QDoubleSpinBox()
         self.v_spin.setRange(0.0, scpi_map.V_MAX)
         self.v_spin.setDecimals(3)
@@ -129,6 +246,8 @@ class MainWindow(QMainWindow):
     def _build_protection(self) -> QGroupBox:
         box = QGroupBox("Protection (OVP / OCP)")
         lay = QFormLayout(box)
+        lay.setHorizontalSpacing(theme.SPACE_6)
+        lay.setVerticalSpacing(theme.SPACE_4)
         self.ovp_spin = QDoubleSpinBox()
         self.ovp_spin.setRange(0.0, scpi_map.OVP_MAX)
         self.ovp_spin.setDecimals(2)
@@ -149,24 +268,39 @@ class MainWindow(QMainWindow):
         self.delay_spin.setSuffix(" ms")
         self.prot_apply_btn = QPushButton("Apply protection")
         self.prot_clear_btn = QPushButton("Reset protection")
+        # A ticked box protects nothing until it is applied; the lamp says so
+        # without colouring the button, which the system does not allow.
+        self.pending_led = Led("PENDING", colour="amber")
         self.prot_status = QLabel("-")
         self.prot_status.setWordWrap(True)
         self.prot_hint = QLabel("The software watchdog is limited by the poll interval and is "
                                 "no replacement for a fuse or real hardware protection.")
         self.prot_hint.setWordWrap(True)
-        self.prot_hint.setStyleSheet("color:#94a3b8; font-size:11px;")
+        self.prot_hint.setStyleSheet(
+            f"color:{theme.GREY_500}; font-size:{theme.TEXT_XS}px;")
         self.alarm = QLabel("")
         self.alarm.setVisible(False)
         self.alarm.setStyleSheet(
-            "background:#7f1d1d; color:white; font-weight:bold; padding:6px;")
+            theme.border_image("bevel_in")
+            + f"padding: {theme.SPACE_6}px;"
+            f"background: {theme.SURFACE_WINDOW}; color: {theme.STATUS_DANGER};"
+            "font-weight: bold;")
         self.alarm.setWordWrap(True)
+
+        apply_row = QWidget()
+        apply_lay = QHBoxLayout(apply_row)
+        apply_lay.setContentsMargins(0, 0, 0, 0)
+        apply_lay.setSpacing(theme.SPACE_8)
+        apply_lay.addWidget(self.prot_apply_btn)
+        apply_lay.addWidget(self.pending_led)
+        apply_lay.addStretch(1)
 
         lay.addRow("OVP threshold:", self.ovp_spin)
         lay.addRow("", self.ovp_check)
         lay.addRow("OCP threshold:", self.ocp_spin)
         lay.addRow("", self.ocp_check)
         lay.addRow("Trip delay:", self.delay_spin)
-        lay.addRow(self.prot_apply_btn)
+        lay.addRow(apply_row)
         lay.addRow(self.prot_clear_btn)
         lay.addRow(self.prot_status)
         lay.addRow(self.prot_hint)
@@ -176,44 +310,59 @@ class MainWindow(QMainWindow):
     def _build_output(self) -> QGroupBox:
         box = QGroupBox("Output")
         lay = QVBoxLayout(box)
+        lay.setSpacing(theme.SPACE_6)
         self.output_btn = QPushButton("OUTPUT OFF")
         self.output_btn.setCheckable(True)
-        self.output_btn.setMinimumHeight(64)
-        self.output_btn.setFont(QFont("Segoe UI", 14, QFont.Weight.Bold))
+        self.output_btn.setMinimumHeight(theme.px(38))
+        self.output_btn.setStyleSheet(
+            theme.font_style(theme.ui_family(), theme.TEXT_LG, bold=True))
         lay.addWidget(self.output_btn)
         if self.demo:
             row = QHBoxLayout()
+            row.setSpacing(theme.SPACE_6)
             self.demo_ovp_btn = QPushButton("Demo: force OVP")
             self.demo_ocp_btn = QPushButton("Demo: force OCP")
             row.addWidget(self.demo_ovp_btn)
             row.addWidget(self.demo_ocp_btn)
             lay.addLayout(row)
-        self._style_output(False)
         return box
 
-    def _build_readout(self) -> QFrame:
-        frame = QFrame()
-        frame.setFrameShape(QFrame.Shape.StyledPanel)
-        lay = QHBoxLayout(frame)
-        font = QFont("Consolas", 40, QFont.Weight.Bold)
-        self.v_label = QLabel("0.000 V")
-        self.i_label = QLabel("0.000 A")
-        self.p_label = QLabel("0.000 W")
-        for lbl, color in ((self.v_label, "#38bdf8"), (self.i_label, "#f59e0b"),
-                           (self.p_label, "#a3e635")):
-            lbl.setFont(font)
-            lbl.setStyleSheet(f"color:{color};")
-            lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            lay.addWidget(lbl, 1)
+    def _build_readout(self) -> QGroupBox:
+        """The measured panel: one big LED well per quantity, lamps beneath."""
+        box = QGroupBox("Measured")
+        lay = QVBoxLayout(box)
+        lay.setSpacing(theme.SPACE_4)
+
+        wells = QHBoxLayout()
+        wells.setSpacing(theme.SPACE_4)
+        self.v_readout = LedReadout("VOLTS", "V", digits=3, colour="green", size="lg")
+        self.i_readout = LedReadout("AMPS", "A", digits=3, colour="amber", size="lg")
+        self.p_readout = LedReadout("WATTS", "W", digits=3, colour="green", size="md")
+        for well in (self.v_readout, self.i_readout, self.p_readout):
+            wells.addWidget(well, 1)
+        lay.addLayout(wells)
+
+        lamps = QHBoxLayout()
+        lamps.setSpacing(theme.SPACE_16)
+        self.led_link = Led("LINK")
+        self.led_out = Led("OUT")
+        self.led_cc = Led("CC", colour="amber")
+        self.led_trip = Led("TRIP", colour="red")
+        for lamp in (self.led_link, self.led_out, self.led_cc, self.led_trip):
+            lamps.addWidget(lamp)
+        lamps.addStretch(1)
         self.mode_label = QLabel("--")
-        self.mode_label.setFont(QFont("Consolas", 20, QFont.Weight.Bold))
-        self.mode_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        lay.addWidget(self.mode_label, 0)
-        return frame
+        self.mode_label.setStyleSheet(
+            theme.font_style(theme.mono_family(), theme.TEXT_READOUT_SM))
+        lamps.addWidget(self.mode_label)
+        lay.addLayout(lamps)
+        return box
 
     def _build_misc(self) -> QGroupBox:
         box = QGroupBox("Misc")
         lay = QGridLayout(box)
+        lay.setHorizontalSpacing(theme.SPACE_6)
+        lay.setVerticalSpacing(theme.SPACE_4)
         self.poll_spin = QSpinBox()
         self.poll_spin.setRange(100, 2000)
         self.poll_spin.setSingleStep(50)
@@ -223,6 +372,8 @@ class MainWindow(QMainWindow):
         self.local_btn = QPushButton("Local")
         self.raw_edit = QLineEdit()
         self.raw_edit.setPlaceholderText("Raw-SCPI ...")
+        self.raw_edit.setStyleSheet(
+            theme.font_style(theme.mono_family(), theme.TEXT_LG))
         self.raw_send_btn = QPushButton("Send")
         self.raw_query_btn = QPushButton("Query")
         self.csv_btn = QPushButton("Record CSV")
@@ -244,7 +395,8 @@ class MainWindow(QMainWindow):
         self.log_view = QPlainTextEdit()
         self.log_view.setReadOnly(True)
         self.log_view.setMaximumBlockCount(3000)
-        self.log_view.setFont(QFont("Consolas", 9))
+        self.log_view.setStyleSheet(
+            theme.font_style(theme.mono_family(), theme.TEXT_LG))
         lay.addWidget(self.log_view)
         return box
 
@@ -259,7 +411,7 @@ class MainWindow(QMainWindow):
         d.profile_ready.connect(self._on_profile)
         d.idn_ready.connect(lambda s: self.idn_label.setText(f"IDN: {s or 'unknown'}"))
         d.raw_response.connect(lambda s: self.raw_edit.setToolTip(s))
-        d.mode_changed.connect(self.mode_label.setText)
+        d.mode_changed.connect(self._on_mode)
         d.setpoints_read.connect(self._on_setpoints)
         d.output_blocked.connect(self._on_output_blocked)
 
@@ -292,11 +444,28 @@ class MainWindow(QMainWindow):
         self.v_slider.sliderReleased.connect(self._on_slider_released)
         self.i_slider.sliderReleased.connect(self._on_slider_released)
 
+        # The menu and toolbar drive the same controls, they hold no state of
+        # their own - the panels stay the single source of truth.
+        self.act_connect.triggered.connect(self._do_connect)
+        self.act_disconnect.triggered.connect(d.request_disconnect)
+        self.act_apply.triggered.connect(self._apply_setpoints)
+        self.act_reset.triggered.connect(self._clear_protection)
+        self.act_remote.triggered.connect(lambda: d.send("remote"))
+        self.act_local.triggered.connect(lambda: d.send("local"))
+        self.act_record.toggled.connect(self.csv_btn.setChecked)
+        self.csv_btn.toggled.connect(self.act_record.setChecked)
+
         if self.demo:
             self.demo_ovp_btn.clicked.connect(lambda: self._force_demo("ovp"))
             self.demo_ocp_btn.clicked.connect(lambda: self._force_demo("ocp"))
 
     # -- Actions ---------------------------------------------------------
+    def _about(self) -> None:
+        QMessageBox.about(
+            self, "About OWON SPE3103",
+            f"OWON {MODEL} control.\n\n"
+            "Interface built with the Bench95 design system.")
+
     def _refresh_resources(self) -> None:
         current = self.res_box.currentText()
         self.res_box.clear()
@@ -344,15 +513,16 @@ class MainWindow(QMainWindow):
             dirty = self._applied != self._protection_fields()
         self.prot_apply_btn.setText(
             "Apply protection (pending)" if dirty else "Apply protection")
-        self.prot_apply_btn.setStyleSheet(
-            "font-weight:bold; background:#b45309; color:white;" if dirty else "")
+        self.pending_led.set_on(dirty, blink=dirty)
 
     def _clear_protection(self) -> None:
         self.driver.clear_protection()
         self._latched = False
         self.alarm.setVisible(False)
+        self.led_trip.set_on(False)
         self.output_btn.setEnabled(self._connected)
         self._update_protection_status()
+        self._refresh_state_pane()
 
     def _update_protection_status(self) -> None:
         self.prot_status.setText(self.driver.protection.stage_text())
@@ -377,9 +547,27 @@ class MainWindow(QMainWindow):
         self.driver.send("output_on" if on else "output_off")
 
     def _style_output(self, on: bool) -> None:
-        self.output_btn.setText("OUTPUT ON" if on else "OUTPUT OFF")
-        self.output_btn.setStyleSheet(
-            "background:#16a34a; color:white;" if on else "background:#475569; color:#e2e8f0;")
+        """State reads off the label, the latched bevel and the OUT lamp - the
+        system keeps colour out of buttons and puts it in the lamps instead."""
+        self.output_btn.setText("OUTPUT ON — click to disable" if on
+                                else "OUTPUT OFF — click to enable")
+        self.led_out.set_on(on)
+        for well in (self.v_readout, self.i_readout, self.p_readout):
+            well.set_off(not on)
+        self._refresh_state_pane()
+
+    def _refresh_state_pane(self) -> None:
+        if self._latched:
+            self.pane_state.setText("Protection tripped — output latched off")
+            self.pane_state.set_tone("danger")
+            return
+        self.pane_state.set_tone("")
+        if not self._connected:
+            self.pane_state.setText("Not connected")
+        elif self._output_on:
+            self.pane_state.setText("Output enabled")
+        else:
+            self.pane_state.setText("Ready")
 
     def _force_demo(self, kind: str) -> None:
         dev = self.driver.demo_device
@@ -416,27 +604,43 @@ class MainWindow(QMainWindow):
     # -- Slots -----------------------------------------------------------
     @pyqtSlot(float, float, float, float)
     def _on_reading(self, v: float, i: float, p: float, ts: float) -> None:
-        self.v_label.setText(f"{v:6.3f} V")
-        self.i_label.setText(f"{i:6.3f} A")
-        self.p_label.setText(f"{p:6.3f} W")
+        self.v_readout.set_value(v)
+        self.i_readout.set_value(i)
+        self.p_readout.set_value(p)
         self.plot.add_point(v, i, ts)
         if self._csv_writer:
             self._csv_writer.writerow([f"{ts:.3f}", f"{v:.4f}", f"{i:.4f}", f"{p:.4f}"])
 
+    @pyqtSlot(str)
+    def _on_mode(self, mode: str) -> None:
+        self.mode_label.setText(mode)
+        self.pane_mode.setText(mode or "--")
+        self.led_cc.set_on(self._output_on and mode.strip().upper() == "CC")
+
     @pyqtSlot(bool)
     def _set_connected(self, ok: bool) -> None:
-        self.status_dot.setText("● connected" if ok else "● disconnected")
-        self.status_dot.setStyleSheet(f"color:{'#16a34a' if ok else '#94a3b8'};")
+        self.status_dot.setText("Connected" if ok else "Not connected")
+        self.status_dot.setStyleSheet(
+            f"color:{theme.STATUS_OK if ok else theme.GREY_500};")
+        self.led_link.set_on(ok)
         self.connect_btn.setEnabled(not ok)
         self.disconnect_btn.setEnabled(ok)
+        self.act_connect.setEnabled(not ok)
+        self.act_disconnect.setEnabled(ok)
         self._connected = ok
         for w in (self.apply_btn, self.output_btn, self.prot_apply_btn,
                   self.prot_clear_btn, self.raw_send_btn, self.raw_query_btn):
             w.setEnabled(ok)
+        for a in (self.act_apply, self.act_reset):
+            a.setEnabled(ok)
+        self.pane_link.setText(
+            f"{self.res_box.currentText().strip()} · {self.baud_box.currentText()} 8N1"
+            if ok else "—")
         if ok:
             # The driver clears a leftover trip when it connects.
             self._latched = False
             self.alarm.setVisible(False)
+            self.led_trip.set_on(False)
             # Nothing is armed on a fresh connection, whatever the fields show.
             self._applied = None
             self._refresh_protection_dirty()
@@ -445,8 +649,10 @@ class MainWindow(QMainWindow):
             self.output_btn.blockSignals(True)
             self.output_btn.setChecked(False)
             self.output_btn.blockSignals(False)
+            self._output_on = False
             self._style_output(False)
-            self.mode_label.setText("--")
+            self._on_mode("--")
+        self._refresh_state_pane()
 
     @pyqtSlot(dict)
     def _on_profile(self, profile: dict) -> None:
@@ -490,6 +696,7 @@ class MainWindow(QMainWindow):
         QApplication.beep()
         self._latched = True
         self._output_on = False
+        self.led_trip.set_on(True, blink=True)
         self.output_btn.blockSignals(True)
         self.output_btn.setChecked(False)
         self.output_btn.blockSignals(False)
@@ -499,6 +706,7 @@ class MainWindow(QMainWindow):
         self.output_btn.setEnabled(False)
         self._update_protection_status()
         self.plot.mark_trip(value, time.time())
+        self._refresh_state_pane()
 
     @pyqtSlot(str)
     def _on_output_blocked(self, reason: str) -> None:
@@ -507,9 +715,12 @@ class MainWindow(QMainWindow):
         self.output_btn.blockSignals(True)
         self.output_btn.setChecked(False)
         self.output_btn.blockSignals(False)
+        self._output_on = False
         self._style_output(False)
         self.output_btn.setEnabled(False)
+        self.led_trip.set_on(True, blink=True)
         self._on_log("WARN", reason)
+        self._refresh_state_pane()
 
     @pyqtSlot(str, str)
     def _on_log(self, level: str, text: str) -> None:

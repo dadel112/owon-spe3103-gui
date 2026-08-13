@@ -1,5 +1,8 @@
 """Live plot. Voltage on the left axis, current on the right, shared time axis -
-pyqtgraph needs two linked view boxes for that."""
+pyqtgraph needs two linked view boxes for that.
+
+Dressed as the design system's PlotWell: a sunken well over the dark readout
+ground, a green grid, and crisp untweened traces in the LED colours."""
 
 from __future__ import annotations
 
@@ -7,11 +10,16 @@ from collections import deque
 
 import pyqtgraph as pg
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import (QCheckBox, QComboBox, QDoubleSpinBox, QHBoxLayout,
                              QLabel, QPushButton, QVBoxLayout, QWidget)
 
+from . import theme
+
 WINDOWS = [("10 s", 10), ("60 s", 60), ("5 min", 300), ("30 min", 1800)]
 MAX_POINTS = 20000          # emergency cap in case trimming ever misses something
+
+GRID_GREEN = QColor(34, 255, 102, 41)   # rgba(34,255,102,.16), as PlotWell.jsx
 
 
 class LivePlot(QWidget):
@@ -27,36 +35,51 @@ class LivePlot(QWidget):
         self._paused = False
         self._window = 60
 
+        # No antialiasing anywhere: the system wants hard pixels, not smooth ones.
         pg.setConfigOptions(antialias=False)
         self._plot = pg.PlotWidget()
-        self._plot.setBackground("#101418")
-        self._plot.showGrid(x=True, y=True, alpha=0.25)
-        self._plot.setLabel("left", "Voltage", units="V", color="#38bdf8")
-        self._plot.setLabel("bottom", "Time", units="s")
+        self._plot.setBackground(theme.READOUT_BG)
         self._plot.setMenuEnabled(False)
+        self._plot.setStyleSheet(theme.border_image("bevel_in"))
+
+        tick_font = theme.mono_font(theme.TEXT_SM)
+        for name, colour in (("left", theme.LED_GREEN), ("bottom", theme.LED_GREEN),
+                             ("right", theme.LED_AMBER)):
+            axis = self._plot.plotItem.getAxis(name)
+            axis.setPen(pg.mkPen(GRID_GREEN))
+            axis.setTextPen(pg.mkPen(colour))
+            axis.setTickFont(tick_font)
+            axis.setGrid(70)        # the well's own green grid, 0-255
+        self._plot.setLabel("left", "Voltage", units="V", color=theme.LED_GREEN)
+        self._plot.setLabel("bottom", "Time", units="s", color=theme.LED_GREEN)
 
         self._vb2 = pg.ViewBox()
         self._plot.plotItem.showAxis("right")
         self._plot.plotItem.scene().addItem(self._vb2)
         self._plot.plotItem.getAxis("right").linkToView(self._vb2)
         self._vb2.setXLink(self._plot.plotItem)
-        self._plot.plotItem.getAxis("right").setLabel("Current", units="A", color="#f59e0b")
+        self._plot.plotItem.getAxis("right").setLabel("Current", units="A",
+                                                      color=theme.LED_AMBER)
         self._plot.plotItem.vb.sigResized.connect(self._sync_views)
 
-        self._curve_v = self._plot.plot(pen=pg.mkPen("#38bdf8", width=2))
-        self._curve_i = pg.PlotCurveItem(pen=pg.mkPen("#f59e0b", width=2))
+        trace = theme.px(1)
+        self._curve_v = self._plot.plot(pen=pg.mkPen(theme.LED_GREEN, width=trace))
+        self._curve_i = pg.PlotCurveItem(pen=pg.mkPen(theme.LED_AMBER, width=trace))
         self._vb2.addItem(self._curve_i)
 
         dash = Qt.PenStyle.DashLine
-        self._ovp_line = pg.InfiniteLine(angle=0, pen=pg.mkPen("#38bdf8", style=dash))
-        self._ocp_line = pg.InfiniteLine(angle=0, pen=pg.mkPen("#f59e0b", style=dash))
+        self._ovp_line = pg.InfiniteLine(
+            angle=0, pen=pg.mkPen(theme.LED_GREEN, style=dash))
+        self._ocp_line = pg.InfiniteLine(
+            angle=0, pen=pg.mkPen(theme.LED_AMBER, style=dash))
         self._plot.addItem(self._ovp_line)
         self._vb2.addItem(self._ocp_line)
         self._ovp_line.hide()
         self._ocp_line.hide()
-        self._trip_marks = pg.ScatterPlotItem(size=11, symbol="x",
-                                              pen=pg.mkPen("#ef4444", width=2),
-                                              brush=pg.mkBrush("#ef4444"))
+        self._trip_marks = pg.ScatterPlotItem(size=theme.px(11), symbol="x",
+                                              pen=pg.mkPen(theme.LED_RED,
+                                                           width=theme.px(2)),
+                                              brush=pg.mkBrush(theme.LED_RED))
         self._plot.addItem(self._trip_marks)
 
         self._win_box = QComboBox()
