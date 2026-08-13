@@ -1,0 +1,42 @@
+<!-- @dsCard group="Components" viewport="700x260" name="Navigation — menu bar, tabs, task bar" subtitle="Mnemonic menus, property-sheet tabs, desktop task bar" -->
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>Navigation</title><link rel="stylesheet" href="../../styles.css"><style>body{margin:0;background:var(--grey-300);padding:12px;font:var(--type-body)}#root{display:block}.row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px}.cap{font:var(--weight-normal) var(--text-pixel-sm)/1 var(--font-pixel);letter-spacing:var(--tracking-pixel);color:var(--grey-700);margin:0 0 6px}</style></head><body><div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<script src="../../_dev_fallback.js" data-root="../.."></script>
+<script type="text/babel">
+const NS="Bench95DesignSystem_3e1c29";
+let MenuBar,Tabs,TaskBar,Panel,Checkbox;
+
+function Card(){
+  const [tab,setTab]=React.useState("Output");
+  const menus=[{label:"File",items:[{label:"Open Profile…",shortcut:"Ctrl+O"},{label:"Save Profile",shortcut:"Ctrl+S"},"-",{label:"Exit"}]},
+    {label:"Device",items:[{label:"Connect…"},{label:"Disconnect",disabled:true},"-",{label:"Reset"}]},
+    {label:"View",items:[{label:"Log Window"},{label:"Status Bar"}]},
+    {label:"Help",items:[{label:"About Bench95"}]}];
+  return (<div>
+    <div style={{background:"var(--surface-window)",boxShadow:"var(--bevel-out)",padding:2,marginBottom:12}}>
+      <MenuBar menus={menus}/>
+    </div>
+    <div style={{display:"flex",gap:14,alignItems:"flex-start"}}>
+      <Tabs tabs={["Output","Protection","Logging","SCPI"]} value={tab} onChange={setTab} style={{width:330}} bodyStyle={{height:96}}>
+        <div style={{display:"flex",flexDirection:"column",gap:6}}>
+          <span>Panel body for <b>{tab}</b>.</span>
+          <Checkbox checked label="Track setpoints on connect"/>
+        </div>
+      </Tabs>
+      <div style={{width:330}}>
+        <p className="cap">TASK BAR</p>
+        <TaskBar startLabel="Bench" tasks={[{label:"Supply — COM3",icon:"zap"},{label:"Log",icon:"chart"}]} activeTask="Supply — COM3" tray={["cellular-signal-3","volume-3"]} clock="14:32"/>
+      </div>
+    </div>
+  </div>);
+}
+(function boot(){
+  const ds=window[NS];
+  if(!ds) return setTimeout(boot,40);
+  ({MenuBar, Tabs, TaskBar, Panel, Checkbox} = ds);
+  ReactDOM.createRoot(document.getElementById("root")).render(<Card />);
+})();
+</script></body></html>

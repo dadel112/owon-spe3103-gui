@@ -1,0 +1,17 @@
+<!-- @dsCard group="Bevels" viewport="700x150" name="Fills & patterns" subtitle="Checker (latched face), scanlines (readouts), grip, hard shadow" -->
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css"><style>
+body{margin:0;padding:12px;background:var(--grey-300);font:var(--type-body)}
+.row{display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap}
+.sw{width:104px}
+.chip{height:44px;box-shadow:var(--bevel-out-thin)}
+.n{display:block;font:var(--weight-normal) var(--text-2xs)/1.4 var(--font-ui);color:var(--grey-700);margin-top:3px;white-space:nowrap}
+.v{display:block;font:var(--weight-normal) var(--text-xs)/1.4 var(--font-mono);color:var(--black)}
+
+</style></head><body>
+<div class="row" style="gap:16px">
+<div style="width:120px;height:44px;background:var(--pattern-checker);box-shadow:var(--bevel-out-pressed)"></div>
+<div style="width:120px;height:44px;background:var(--readout-bg)"><div style="width:100%;height:100%;background:var(--pattern-scanlines)"></div></div>
+<div style="width:120px;height:44px;background:var(--surface-window);box-shadow:var(--bevel-out),var(--shadow-hard)"></div>
+</div>
+<div class="row"><span class="v" style="width:136px">--pattern-checker</span><span class="v" style="width:136px">--pattern-scanlines</span><span class="v">--shadow-hard</span></div>
+</body></html>

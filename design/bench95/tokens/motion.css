@@ -1,0 +1,14 @@
+:root{
+/* The era had no tweening. Depth flips between two states on the same frame;
+   anything that moves, moves in steps. */
+--dur-instant:0ms; /* @kind other */      /* hover, press, focus — no transition at all */
+--dur-step:120ms; /* @kind other */       /* one discrete step (progress chunk, marquee tick) */
+--dur-blink:530ms; /* @kind other */      /* caret / alarm blink, the classic interval */
+--dur-marquee:1600ms; /* @kind other */
+--ease-step:steps(1,end); /* @kind other */
+--ease-steps-8:steps(8,end); /* @kind other */
+--ease-linear:linear; /* @kind other */
+--transition-none:none; /* @kind other */
+--transition-stepped:all var(--dur-step) var(--ease-step);
+}
+@media (prefers-reduced-motion:reduce){:root{--dur-blink:0ms; /* @kind other */ --dur-marquee:0ms /* @kind other */}}

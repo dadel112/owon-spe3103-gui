@@ -1,0 +1,76 @@
+:root{
+/* ---- chrome greys: the 3D widget palette ---- */
+--grey-white:#ffffff;   /* bevel outer highlight */
+--grey-100:#dfdfdf;     /* bevel inner highlight, scrollbar trough tint */
+--grey-200:#d4d0c8;     /* warm chrome face (dialogs) */
+--grey-300:#c0c0c0;     /* canonical widget face */
+--grey-400:#a0a0a0;
+--grey-500:#808080;     /* bevel inner shadow, disabled text */
+--grey-700:#404040;
+--black:#000000;        /* bevel outer shadow, all body text */
+
+/* ---- title bar blues ---- */
+--navy-900:#000080;     /* classic active title bar */
+--navy-700:#0a246a;
+--blue-600:#0054e3;     /* xp active title start */
+--blue-500:#1084d0;     /* title bar gradient end (95 plus!) */
+--blue-400:#3a93ff;     /* xp title highlight */
+--blue-200:#a6caf0;     /* inactive-ish / selection tint */
+
+/* ---- desktop backdrops ---- */
+--desktop-teal:#008080; /* the default teal */
+--desktop-blue:#3a6ea5;
+--hill-sky:#57a0e0;
+--hill-sky-top:#1e63b0;
+--hill-grass:#7cb342;
+--hill-grass-dark:#4b7a20;
+
+/* ---- readout / instrument colours ---- */
+--led-green:#22ff66;
+--led-green-dim:#0d5c26;
+--led-amber:#ffb000;
+--led-amber-dim:#5c3f00;
+--led-red:#ff3b30;
+--led-red-dim:#5c0f0c;
+--readout-bg:#0b1a0f;   /* LCD/LED window */
+--readout-bg-amber:#1a1200;
+--crt-line:rgba(0,0,0,.28); /* scanline overlay */
+
+/* ---- semantic / status ---- */
+--status-ok:#008000;
+--status-warn:#ffb000;
+--status-danger:#c00000;
+--status-info:#000080;
+
+/* ---- semantic aliases: use these in components ---- */
+--surface-desktop:var(--desktop-teal);
+--surface-window:var(--grey-300);
+--surface-dialog:var(--grey-200);
+--surface-field:var(--grey-white);
+--surface-field-disabled:var(--grey-300);
+--surface-menu:var(--grey-300);
+--surface-titlebar:var(--navy-900);
+--surface-titlebar-end:var(--blue-500);
+--surface-titlebar-inactive:var(--grey-500);
+--surface-titlebar-inactive-end:var(--grey-400);
+--surface-trough:var(--grey-100);
+--surface-selected:var(--navy-900);
+--surface-readout:var(--readout-bg);
+
+--text-body:var(--black);
+--text-on-titlebar:var(--grey-white);
+--text-on-selected:var(--grey-white);
+--text-disabled:var(--grey-500);
+--text-disabled-emboss:var(--grey-white);
+--text-link:var(--navy-900);
+--text-link-hover:var(--blue-500);
+--text-readout:var(--led-green);
+--text-readout-off:var(--led-green-dim);
+
+--border-bevel-light:var(--grey-white);
+--border-bevel-light-inner:var(--grey-100);
+--border-bevel-dark-inner:var(--grey-500);
+--border-bevel-dark:var(--black);
+--border-hairline:var(--grey-500);
+--focus-dotted:var(--black);
+}

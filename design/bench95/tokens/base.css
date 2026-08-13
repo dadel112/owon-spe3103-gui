@@ -1,0 +1,24 @@
+*{box-sizing:border-box}
+body{margin:0;background:var(--surface-desktop);color:var(--text-body);font:var(--type-body);-webkit-font-smoothing:none;font-smooth:never}
+img,svg{image-rendering:pixelated}
+h1,h2,h3,h4{margin:0;font-family:var(--font-ui);font-weight:var(--weight-bold);line-height:var(--leading-ui)}
+h1{font-size:var(--text-xl)}h2{font-size:var(--text-lg)}h3{font-size:var(--text-md)}h4{font-size:var(--text-sm)}
+p{margin:0 0 var(--space-8)}
+a{color:var(--text-link);text-decoration:underline}
+a:hover{color:var(--text-link-hover)}
+a:active{color:var(--status-danger)}
+a:focus-visible{outline:var(--focus-outline);outline-offset:1px}
+hr{height:2px;border:0;margin:var(--space-4) 0;box-shadow:var(--bevel-in-thin);background:transparent}
+::selection{background:var(--surface-selected);color:var(--text-on-selected)}
+button,input,select,textarea{font:var(--type-button);color:inherit}
+:focus-visible{outline:var(--focus-outline)}
+
+/* primitives available without React — the bevel vocabulary as classes */
+.bevel-out{box-shadow:var(--bevel-out);background:var(--surface-window)}
+.bevel-in{box-shadow:var(--bevel-in);background:var(--surface-field)}
+.bevel-out-thin{box-shadow:var(--bevel-out-thin)}
+.bevel-in-thin{box-shadow:var(--bevel-in-thin)}
+.pixel-text{font-family:var(--font-pixel);letter-spacing:var(--tracking-pixel)}
+.readout-text{font-family:var(--font-readout);letter-spacing:var(--tracking-readout);color:var(--text-readout)}
+.scanlines{position:relative}
+.scanlines::after{content:"";position:absolute;inset:0;pointer-events:none;background:var(--pattern-scanlines)}

@@ -1,0 +1,23 @@
+<!-- @dsCard group="Bench95 Supply" viewport="1180x700" name="Desktop — supply control" subtitle="Connect, set, enable output, run a sequence, watch the log" -->
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>Bench95 Supply — UI kit</title><link rel="stylesheet" href="../../styles.css"><style>
+html,body{height:100%}body{margin:0;overflow:hidden;background:var(--desktop-teal)}#root{position:absolute;inset:0}
+</style></head><body><div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<script src="../../_dev_fallback.js" data-root="../.."></script>
+<script type="text/babel" src="MainWindow.jsx"></script>
+<script type="text/babel" src="ConnectDialog.jsx"></script>
+<script type="text/babel" src="SequenceWindow.jsx"></script>
+<script type="text/babel" src="LogWindow.jsx"></script>
+<script type="text/babel" src="ScpiConsole.jsx"></script>
+<script type="text/babel" src="Desktop.jsx"></script>
+<script type="text/babel">
+const NS="Bench95DesignSystem_3e1c29";
+(function boot(){
+  const ds=window[NS];
+  if(!ds||!window.Desktop||!window.MainWindow) return setTimeout(boot,40);
+  ReactDOM.createRoot(document.getElementById("root")).render(<Desktop ds={ds} />);
+})();
+</script></body></html>

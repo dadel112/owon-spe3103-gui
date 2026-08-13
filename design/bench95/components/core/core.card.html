@@ -1,0 +1,42 @@
+<!-- @dsCard group="Components" viewport="700x300" name="Core — Window, Button, Panel, Toolbar" subtitle="The bevel vocabulary: frame, push button, group box, tool strip" -->
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>Core</title><link rel="stylesheet" href="../../styles.css"><style>body{margin:0;background:var(--grey-300);padding:12px;font:var(--type-body)}#root{display:block}.row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px}.cap{font:var(--weight-normal) var(--text-pixel-sm)/1 var(--font-pixel);letter-spacing:var(--tracking-pixel);color:var(--grey-700);margin:0 0 6px}</style></head><body><div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<script src="../../_dev_fallback.js" data-root="../.."></script>
+<script type="text/babel">
+const NS="Bench95DesignSystem_3e1c29";
+let Window,Button,IconButton,Panel,Toolbar,ToolbarSeparator,ToolbarGrip,Icon,TitleBar;
+
+function Card(){
+  return (<div style={{display:"flex",gap:14,alignItems:"flex-start"}}>
+    <Window title="Supply — COM3" icon="zap" width={300} style={{flex:"0 0 auto"}}>
+      <Toolbar><ToolbarGrip/><IconButton icon="play" label="Run"/><IconButton icon="pause" label="Hold"/><ToolbarSeparator/><IconButton icon="save" label="Save" active/><IconButton icon="chart" label="Log"/></Toolbar>
+      <div style={{padding:8}}>
+        <Panel label="Channel 1">
+          <div className="row" style={{marginBottom:0}}><Button isDefault>OK</Button><Button>Cancel</Button></div>
+        </Panel>
+      </div>
+    </Window>
+    <div>
+      <p className="cap">BUTTON — default / normal / pressed / disabled / icon</p>
+      <div className="row"><Button isDefault>OK</Button><Button>Cancel</Button><Button pressed>Apply</Button><Button disabled>Apply</Button><Button icon="power">Output</Button><Button size="sm">Set</Button></div>
+      <p className="cap">TITLEBAR — active / xp / inactive</p>
+      <div style={{width:300}}>
+        <div style={{background:"var(--surface-window)",boxShadow:"var(--bevel-out)",marginBottom:6}}><TitleBar title="Active" icon="zap"/></div>
+        <div style={{background:"var(--surface-window)",boxShadow:"var(--bevel-out)",marginBottom:6}}><TitleBar title="XP variant" icon="sliders" variant="xp"/></div>
+        <div style={{background:"var(--surface-window)",boxShadow:"var(--bevel-out)"}}><TitleBar title="Inactive" active={false}/></div>
+      </div>
+      <p className="cap" style={{marginTop:10}}>ICON — pixelarticons @ 16 / 24</p>
+      <div className="row" style={{marginBottom:0}}>{["power","zap","sliders","save","chart","alert","info-box","reload","lock","clock"].map(n=><Icon key={n} name={n} size={16}/>)}</div>
+    </div>
+  </div>);
+}
+(function boot(){
+  const ds=window[NS];
+  if(!ds) return setTimeout(boot,40);
+  ({Window, Button, IconButton, Panel, Toolbar, ToolbarSeparator, ToolbarGrip, Icon, TitleBar} = ds);
+  ReactDOM.createRoot(document.getElementById("root")).render(<Card />);
+})();
+</script></body></html>

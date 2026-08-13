@@ -1,0 +1,47 @@
+<!-- @dsCard group="Components" viewport="700x300" name="Display — readouts, lamps, list, plot" subtitle="LED wells, indicator lamps, chunky progress, scope well" -->
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>Display</title><link rel="stylesheet" href="../../styles.css"><style>body{margin:0;background:var(--grey-300);padding:12px;font:var(--type-body)}#root{display:block}.row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px}.cap{font:var(--weight-normal) var(--text-pixel-sm)/1 var(--font-pixel);letter-spacing:var(--tracking-pixel);color:var(--grey-700);margin:0 0 6px}</style></head><body><div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<script src="../../_dev_fallback.js" data-root="../.."></script>
+<script type="text/babel">
+const NS="Bench95DesignSystem_3e1c29";
+let LedReadout,Led,ProgressBar,StatusBar,ListView,PlotWell;
+
+function Card(){
+  const pts=Array.from({length:60},(_,i)=>({x:i/59,y:.5+.35*Math.sin(i/5)*Math.exp(-i/70)}));
+  const pts2=Array.from({length:60},(_,i)=>({x:i/59,y:.25+.12*Math.cos(i/7)}));
+  return (<div>
+    <div className="row" style={{alignItems:"flex-end"}}>
+      <LedReadout label="VOLTS" value={12.004} digits={3} unit="V" size="lg"/>
+      <LedReadout label="AMPS" value={1.248} digits={3} unit="A" color="amber"/>
+      <LedReadout label="WATTS" value={14.98} digits={2} unit="W" size="sm"/>
+      <LedReadout label="TRIPPED" value={"OVP"} color="red" size="sm"/>
+      <div style={{display:"flex",flexDirection:"column",gap:5}}>
+        <Led on label="LINK"/><Led on color="amber" label="CC LIMIT"/><Led on color="red" blink label="OVP TRIP"/><Led label="REMOTE"/>
+      </div>
+    </div>
+    <div className="row" style={{alignItems:"flex-start"}}>
+      <div style={{width:330}}>
+        <p className="cap">LIST VIEW</p>
+        <ListView mono height={110} selectedIndex={1}
+          columns={[{key:"t",label:"Time",width:64},{key:"v",label:"V",align:"right"},{key:"a",label:"A",align:"right"},{key:"m",label:"Mode",width:48}]}
+          rows={[{t:"14:31:02",v:"12.004",a:"1.248",m:"CV"},{t:"14:31:03",v:"12.003",a:"1.251",m:"CV"},{t:"14:31:04",v:"11.998",a:"1.402",m:"CC"},{t:"14:31:05",v:"12.001",a:"1.250",m:"CV"},{t:"14:31:06",v:"12.002",a:"1.249",m:"CV"}]}/>
+      </div>
+      <div style={{width:330}}>
+        <p className="cap">PLOT WELL + PROGRESS + STATUS BAR</p>
+        <PlotWell height={82} series={[{points:pts},{points:pts2,color:"var(--led-amber)"}]}/>
+        <ProgressBar value={62} label="62%" style={{width:"100%",marginTop:8}}/>
+        <StatusBar panes={["Ready",{text:"CV",width:36},{text:"COM3 · 9600",width:96}]}/>
+      </div>
+    </div>
+  </div>);
+}
+(function boot(){
+  const ds=window[NS];
+  if(!ds) return setTimeout(boot,40);
+  ({LedReadout, Led, ProgressBar, StatusBar, ListView, PlotWell} = ds);
+  ReactDOM.createRoot(document.getElementById("root")).render(<Card />);
+})();
+</script></body></html>

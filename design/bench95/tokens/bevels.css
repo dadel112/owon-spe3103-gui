@@ -1,0 +1,37 @@
+:root{
+/* The whole depth system is 1px and 2px hard borders drawn with inset
+   box-shadows. No blur, no alpha, no radius, ever. */
+
+/* raised widget (button, window frame, toolbar, taskbar) */
+--bevel-out:inset -1px -1px 0 0 var(--black),inset 1px 1px 0 0 var(--grey-white),inset -2px -2px 0 0 var(--grey-500),inset 2px 2px 0 0 var(--grey-100);
+/* the same widget pushed in (active button, latched toggle) */
+--bevel-out-pressed:inset 1px 1px 0 0 var(--grey-500),inset 2px 2px 0 0 var(--black);
+/* sunken content well (text field, list, readout, canvas) */
+--bevel-in:inset -1px -1px 0 0 var(--grey-white),inset 1px 1px 0 0 var(--grey-500),inset -2px -2px 0 0 var(--grey-100),inset 2px 2px 0 0 var(--black);
+/* 1px versions: group boxes, separators, status panes */
+--bevel-out-thin:inset -1px -1px 0 0 var(--grey-500),inset 1px 1px 0 0 var(--grey-white);
+--bevel-in-thin:inset -1px -1px 0 0 var(--grey-white),inset 1px 1px 0 0 var(--grey-500);
+/* a hard black 1px outline drawn as a shadow (dropdown lists, tooltips) */
+--bevel-outline:inset 0 0 0 1px var(--black);
+/* window frame = raised bevel plus a black keyline, as dialogs had */
+--bevel-window:var(--bevel-out);
+/* default-button ring: 1px black outline outside the bevel */
+--ring-default:0 0 0 1px var(--black);
+/* the only legitimate drop shadow: hard, offset, no blur (menus, XP-era) */
+--shadow-hard:2px 2px 0 0 rgba(0,0,0,.35);
+
+--radius:0;         /* everything is square */
+--radius-titlebar:0;/* set to 3px 3px 0 0 for an XP-leaning window */
+
+--focus-outline:1px dotted var(--focus-dotted);
+--focus-offset:-4px;
+
+/* fill patterns built from gradients, no image files */
+--pattern-checker:repeating-conic-gradient(var(--grey-white) 0% 25%,var(--grey-300) 0% 50%) 0 0/2px 2px;
+--pattern-scanlines:repeating-linear-gradient(to bottom,transparent 0 2px,var(--crt-line) 2px 3px);
+--pattern-titlebar-grip:repeating-linear-gradient(to bottom,var(--grey-white) 0 1px,var(--grey-500) 1px 2px,transparent 2px 4px);
+--gradient-titlebar:linear-gradient(90deg,var(--surface-titlebar),var(--surface-titlebar-end));
+--gradient-titlebar-xp:linear-gradient(180deg,var(--blue-400) 0,var(--blue-600) 45%,var(--navy-700) 100%);
+--gradient-titlebar-inactive:linear-gradient(90deg,var(--surface-titlebar-inactive),var(--surface-titlebar-inactive-end));
+--gradient-hill:linear-gradient(180deg,var(--hill-sky-top) 0,var(--hill-sky) 55%,var(--hill-grass) 56%,var(--hill-grass-dark) 100%);
+}

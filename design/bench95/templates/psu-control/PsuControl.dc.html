@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<!-- @template name="PSU control window" description="Bench95 instrument control window: menu bar, toolbar, LED readouts, setpoints, protection, status bar" -->
+<helmet><script src="./ds-base.js"></script><style>body{margin:0;background:#008080;font:400 11px/1.45 Tahoma,"MS Sans Serif",Verdana,sans-serif;-webkit-font-smoothing:none}</style></helmet>
+<div style="position:absolute;inset:0;background:linear-gradient(180deg,#1e63b0 0,#57a0e0 55%,#7cb342 56%,#4b7a20 100%);padding:24px;box-sizing:border-box">
+<x-import component-from-global-scope="Bench95DesignSystem_3e1c29.Window" title="Bench95 Supply — COM3" icon="zap" width="{{ 648 }}" hint-size="648px,392px">
+  <x-import component-from-global-scope="Bench95DesignSystem_3e1c29.MenuBar" menus="{{ menus }}" hint-size="100%,19px"></x-import>
+  <x-import component-from-global-scope="Bench95DesignSystem_3e1c29.Toolbar" hint-size="100%,28px">
+    <x-import component-from-global-scope="Bench95DesignSystem_3e1c29.IconButton" icon="power" label="Connect" active="{{ true }}" hint-size="24px,24px"></x-import>
+    <x-import component-from-global-scope="Bench95DesignSystem_3e1c29.IconButton" icon="zap" label="Output" active="{{ output }}" onClick="{{ toggleOutput }}" hint-size="24px,24px"></x-import>
+    <x-import component-from-global-scope="Bench95DesignSystem_3e1c29.ToolbarSeparator" hint-size="2px,24px"></x-import>
+    <x-import component-from-global-scope="Bench95DesignSystem_3e1c29.IconButton" icon="reload" label="Read setpoints" hint-size="24px,24px"></x-import>
+    <x-import component-from-global-scope="Bench95DesignSystem_3e1c29.IconButton" icon="save" label="Save profile" hint-size="24px,24px"></x-import>
+    <x-import component-from-global-scope="Bench95DesignSystem_3e1c29.ToolbarSeparator" hint-size="2px,24px"></x-import>
+    <x-import component-from-global-scope="Bench95DesignSystem_3e1c29.IconButton" icon="sliders" label="Sequence" hint-size="24px,24px"></x-import>
+    <x-import component-from-global-scope="Bench95DesignSystem_3e1c29.IconButton" icon="chart" label="Data log" hint-size="24px,24px"></x-import>
+  </x-import>
+  <div style="display:flex;gap:8px;padding:8px;align-items:flex-start">
+    <div style="display:flex;flex-direction:column;gap:8px;flex:0 0 auto">
+      <x-import component-from-global-scope="Bench95DesignSystem_3e1c29.Panel" label="Measured" hint-size="252px,150px">
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <x-import component-from-global-scope="Bench95DesignSystem_3e1c29.LedReadout" label="VOLTS" value="{{ volts }}" digits="{{ 3 }}" unit="V" size="lg" off="{{ readoutOff }}" hint-size="232px,72px"></x-import>
+          <div style="display:flex;gap:4px">
+            <x-import component-from-global-scope="Bench95DesignSystem_3e1c29.LedReadout" label="AMPS" value="{{ amps }}" digits="{{ 3 }}" unit="A" color="amber" off="{{ readoutOff }}" hint-size="114px,52px"></x-import>
+            <x-import component-from-global-scope="Bench95DesignSystem_3e1c29.LedReadout" label="WATTS" value="{{ watts }}" digits="{{ 2 }}" unit="W" size="sm" off="{{ readoutOff }}" hint-size="114px,52px"></x-import>
+          </div>
+          <div style="display:flex;gap:16px;padding-top:4px">
+            <x-import component-from-global-scope="Bench95DesignSystem_3e1c29.Led" on="{{ true }}" label="LINK" hint-size="52px,14px"></x-import>
+            <x-import component-from-global-scope="Bench95DesignSystem_3e1c29.Led" on="{{ false }}" color="amber" label="CC" hint-size="40px,14px"></x-import>
+            <x-import component-from-global-scope="Bench95DesignSystem_3e1c29.Led" on="{{ false }}" color="red" label="TRIP" hint-size="48px,14px"></x-import>
+          </div>
+        </div>
+      </x-import>
+      <x-import component-from-global-scope="Bench95DesignSystem_3e1c29.Button" icon="power" block="{{ true }}" pressed="{{ output }}" onClick="{{ toggleOutput }}" hint-size="252px,30px">{{ outputLabel }}</x-import>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;flex:1 1 auto;min-width:0">
+      <x-import component-from-global-scope="Bench95DesignSystem_3e1c29.Panel" label="Setpoints" hint-size="100%,96px">
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 8px;align-items:center">
+          <span>Voltage</span>
+          <div style="display:flex;gap:6px;align-items:center">
+            <x-import component-from-global-scope="Bench95DesignSystem_3e1c29.NumberSpinner" value="{{ setV }}" onChange="{{ onSetV }}" step="{{ 0.1 }}" max="{{ 30 }}" decimals="{{ 3 }}" unit="V" width="{{ 92 }}" hint-size="92px,21px"></x-import>
+            <x-import component-from-global-scope="Bench95DesignSystem_3e1c29.Slider" value="{{ setV }}" onChange="{{ onSetV }}" min="{{ 0 }}" max="{{ 30 }}" step="{{ 0.1 }}" ticks="{{ 7 }}" width="{{ 132 }}" hint-size="132px,24px"></x-import>
+          </div>
+          <span>Current</span>
+          <div style="display:flex;gap:6px;align-items:center">
+            <x-import component-from-global-scope="Bench95DesignSystem_3e1c29.NumberSpinner" value="{{ setI }}" onChange="{{ onSetI }}" step="{{ 0.01 }}" max="{{ 5 }}" decimals="{{ 3 }}" unit="A" width="{{ 92 }}" hint-size="92px,21px"></x-import>
+            <x-import component-from-global-scope="Bench95DesignSystem_3e1c29.Slider" value="{{ setI }}" onChange="{{ onSetI }}" min="{{ 0 }}" max="{{ 5 }}" step="{{ 0.01 }}" ticks="{{ 6 }}" width="{{ 132 }}" hint-size="132px,24px"></x-import>
+          </div>
+        </div>
+      </x-import>
+      <x-import component-from-global-scope="Bench95DesignSystem_3e1c29.Panel" label="Protection" hint-size="100%,84px">
+        <div style="display:flex;gap:16px">
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <x-import component-from-global-scope="Bench95DesignSystem_3e1c29.Checkbox" checked="{{ ovp }}" onChange="{{ onOvp }}" label="OVP" hint-size="60px,14px"></x-import>
+            <x-import component-from-global-scope="Bench95DesignSystem_3e1c29.Checkbox" checked="{{ false }}" label="OCP" hint-size="60px,14px"></x-import>
+            <x-import component-from-global-scope="Bench95DesignSystem_3e1c29.Checkbox" checked="{{ false }}" disabled="{{ true }}" label="Remote sense" hint-size="110px,14px"></x-import>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <x-import component-from-global-scope="Bench95DesignSystem_3e1c29.NumberSpinner" value="{{ ovpLevel }}" onChange="{{ onOvpLevel }}" step="{{ 0.5 }}" max="{{ 33 }}" decimals="{{ 2 }}" unit="V" width="{{ 92 }}" disabled="{{ ovpDisabled }}" hint-size="92px,21px"></x-import>
+          </div>
+        </div>
+      </x-import>
+      <x-import component-from-global-scope="Bench95DesignSystem_3e1c29.Panel" label="Regulation" hint-size="100%,52px">
+        <div style="display:flex;gap:16px">
+          <x-import component-from-global-scope="Bench95DesignSystem_3e1c29.Radio" checked="{{ true }}" label="Constant voltage" hint-size="118px,14px"></x-import>
+          <x-import component-from-global-scope="Bench95DesignSystem_3e1c29.Radio" checked="{{ false }}" label="Constant current" hint-size="118px,14px"></x-import>
+        </div>
+      </x-import>
+    </div>
+  </div>
+  <x-import component-from-global-scope="Bench95DesignSystem_3e1c29.StatusBar" panes="{{ panes }}" hint-size="100%,20px"></x-import>
+</x-import>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:700,&quot;height&quot;:440},&quot;port&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;COM3&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;model&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;PSU-3005&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  state = { output: false, setV: 12, setI: 1.25, ovp: true, ovpLevel: 13.5 };
+  renderVals() {
+    const s = this.state;
+    const port = this.props.port ?? "COM3";
+    const model = this.props.model ?? "PSU-3005";
+    return {
+      output: s.output,
+      readoutOff: !s.output,
+      volts: s.output ? s.setV : 0,
+      amps: s.output ? s.setI : 0,
+      watts: s.output ? s.setV * s.setI : 0,
+      setV: s.setV,
+      setI: s.setI,
+      ovp: s.ovp,
+      ovpLevel: s.ovpLevel,
+      ovpDisabled: !s.ovp,
+      outputLabel: s.output ? "OUTPUT ON — click to disable" : "OUTPUT OFF — click to enable",
+      toggleOutput: () => this.setState((p) => ({ output: !p.output })),
+      onSetV: (v) => this.setState({ setV: v }),
+      onSetI: (v) => this.setState({ setI: v }),
+      onOvp: (c) => this.setState({ ovp: c }),
+      onOvpLevel: (v) => this.setState({ ovpLevel: v }),
+      menus: [
+        { label: "File", items: [{ label: "Open Profile…", shortcut: "Ctrl+O" }, { label: "Save Profile", shortcut: "Ctrl+S" }, "-", { label: "Exit" }] },
+        { label: "Device", items: [{ label: "Connect…" }, { label: "Disconnect" }, "-", { label: "Reset Device" }] },
+        { label: "View", items: [{ label: "Sequence Editor" }, { label: "Data Log" }, { label: "SCPI Console" }] },
+        { label: "Help", items: [{ label: "About" }] },
+      ],
+      panes: [s.output ? "Output enabled" : "Ready", { text: "CV", width: 36 }, { text: port + " · 9600 8N1", width: 118 }, { text: model, width: 74 }],
+    };
+  }
+}
+
+</script>
+</body>
+</html>

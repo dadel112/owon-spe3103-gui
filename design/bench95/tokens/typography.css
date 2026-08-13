@@ -1,0 +1,46 @@
+:root{
+/* families. MS Sans Serif is the authentic UI face and is now self-hosted
+   (tokens/fonts.css); Tahoma and Verdana remain as fallbacks. */
+--font-ui:"MS Sans Serif",Tahoma,"Microsoft Sans Serif",Verdana,Geneva,sans-serif;
+--font-pixel:"Silkscreen","Pixelify Sans",Tahoma,monospace;
+--font-pixel-soft:"Pixelify Sans","Silkscreen",Tahoma,sans-serif;
+--font-mono:"VT323","Lucida Console","Courier New",monospace;
+--font-readout:"VT323","Lucida Console",monospace;
+
+/* sizes — the UI is authored on an 11px body, as the era was */
+--text-2xs:9px;
+--text-xs:10px;
+--text-sm:11px;   /* body / menus / labels / buttons */
+--text-md:12px;
+--text-lg:13px;
+--text-xl:16px;
+--text-pixel-sm:8px;   /* Silkscreen runs small; 8px = ~11px cap height */
+--text-pixel-md:10px;
+--text-pixel-lg:16px;
+--text-readout-sm:20px;
+--text-readout-md:32px;
+--text-readout-lg:48px;
+
+--weight-normal:400;
+--weight-bold:700;
+
+--leading-tight:1;
+--leading-ui:1.2;      /* menus, buttons, labels */
+--leading-body:1.45;   /* prose in dialogs and help text */
+
+--tracking-normal:0;
+--tracking-pixel:.5px; /* Silkscreen needs air */
+--tracking-readout:2px;
+
+/* semantic type roles */
+--type-titlebar:var(--weight-bold) var(--text-sm)/var(--leading-ui) var(--font-ui);
+--type-menu:var(--weight-normal) var(--text-sm)/var(--leading-ui) var(--font-ui);
+--type-button:var(--weight-normal) var(--text-sm)/var(--leading-ui) var(--font-ui);
+--type-label:var(--weight-normal) var(--text-sm)/var(--leading-ui) var(--font-ui);
+--type-body:var(--weight-normal) var(--text-sm)/var(--leading-body) var(--font-ui);
+--type-groupbox:var(--weight-normal) var(--text-sm)/var(--leading-ui) var(--font-ui);
+--type-statusbar:var(--weight-normal) var(--text-sm)/var(--leading-ui) var(--font-ui);
+--type-display:var(--weight-normal) var(--text-pixel-lg)/var(--leading-tight) var(--font-pixel);
+--type-readout:var(--weight-normal) var(--text-readout-md)/var(--leading-tight) var(--font-readout);
+--type-terminal:var(--weight-normal) var(--text-lg)/1.15 var(--font-mono);
+}

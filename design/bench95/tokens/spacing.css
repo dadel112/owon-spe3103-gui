@@ -1,0 +1,31 @@
+:root{
+/* everything lands on whole pixels; the grid is 1px, not 4px */
+--space-0:0;
+--space-1:1px;   /* bevel thickness, hairline gaps */
+--space-2:2px;   /* inner bevel, text inset in fields */
+--space-3:3px;   /* button label inset */
+--space-4:4px;   /* control gap */
+--space-6:6px;   /* label-to-control */
+--space-8:8px;   /* group box padding, dialog gutter */
+--space-11:11px; /* dialog edge inset (classic) */
+--space-16:16px;
+--space-24:24px;
+
+/* control metrics, copied from the era's actual pixel sizes */
+--control-h-sm:18px;   /* spinner, small button */
+--control-h:21px;      /* text field, dropdown */
+--control-h-btn:23px;  /* push button */
+--control-h-lg:26px;
+--btn-min-w:75px;      /* OK / Cancel width */
+--titlebar-h:18px;
+--titlebar-btn:14px;
+--menubar-h:19px;
+--statusbar-h:20px;
+--scrollbar:16px;
+--tab-h:21px;
+--icon-16:16px;
+--icon-24:24px;
+--icon-32:32px;
+--taskbar-h:28px;
+--field-inset:var(--space-2);
+}

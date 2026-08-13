@@ -1,0 +1,18 @@
+<!-- @dsCard group="Motion" viewport="700x140" name="Stepped motion" subtitle="No tweening: 530ms blink, 20-chunk progress, instant state flips" -->
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css"><style>
+body{margin:0;padding:12px;background:var(--grey-300);font:var(--type-body)}
+.row{display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap}
+.sw{width:104px}
+.chip{height:44px;box-shadow:var(--bevel-out-thin)}
+.n{display:block;font:var(--weight-normal) var(--text-2xs)/1.4 var(--font-ui);color:var(--grey-700);margin-top:3px;white-space:nowrap}
+.v{display:block;font:var(--weight-normal) var(--text-xs)/1.4 var(--font-mono);color:var(--black)}
+@keyframes b{50%{opacity:.15}}
+</style></head><body>
+<div class="row" style="align-items:center;gap:20px">
+<span style="display:flex;align-items:center;gap:6px;font:var(--type-label)"><span style="width:10px;height:10px;border-radius:50%;background:var(--led-red);box-shadow:0 0 5px var(--led-red);animation:b var(--dur-blink) var(--ease-step) infinite"></span>TRIP · --dur-blink 530ms</span>
+<span style="display:flex;gap:2px;padding:3px;width:220px;height:18px;box-shadow:var(--bevel-in);background:var(--surface-trough)">
+<span style="flex:1;background:var(--navy-900)"></span><span style="flex:1;background:var(--navy-900)"></span><span style="flex:1;background:var(--navy-900)"></span><span style="flex:1;background:var(--navy-900)"></span><span style="flex:1;background:var(--navy-900)"></span><span style="flex:1;background:var(--navy-900)"></span><span style="flex:1;background:var(--navy-900)"></span><span style="flex:1;background:var(--navy-900)"></span><span style="flex:1;background:var(--navy-900)"></span><span style="flex:1;background:var(--navy-900)"></span><span style="flex:1;background:var(--navy-900)"></span><span style="flex:1;background:var(--navy-900)"></span><span style="flex:1;background:transparent"></span><span style="flex:1;background:transparent"></span><span style="flex:1;background:transparent"></span><span style="flex:1;background:transparent"></span><span style="flex:1;background:transparent"></span><span style="flex:1;background:transparent"></span><span style="flex:1;background:transparent"></span><span style="flex:1;background:transparent"></span>
+</span>
+<span class="v">--ease-step steps(1,end)</span>
+</div>
+</body></html>

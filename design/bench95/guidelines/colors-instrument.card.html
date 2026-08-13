@@ -1,0 +1,20 @@
+<!-- @dsCard group="Colors" viewport="700x160" name="Instrument colours" subtitle="LED digit colours, their dim states, and the readout ground" -->
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css"><style>
+body{margin:0;padding:12px;background:var(--grey-300);font:var(--type-body)}
+.row{display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap}
+.sw{width:104px}
+.chip{height:44px;box-shadow:var(--bevel-out-thin)}
+.n{display:block;font:var(--weight-normal) var(--text-2xs)/1.4 var(--font-ui);color:var(--grey-700);margin-top:3px;white-space:nowrap}
+.v{display:block;font:var(--weight-normal) var(--text-xs)/1.4 var(--font-mono);color:var(--black)}
+
+</style></head><body>
+<div class="row">
+<div style="background:var(--readout-bg);box-shadow:var(--bevel-in);padding:8px 12px">
+<span style="font:var(--weight-normal) 30px/1 var(--font-readout);letter-spacing:var(--tracking-readout);color:var(--led-green);text-shadow:0 0 6px var(--led-green)">12.004</span>
+<span style="display:block;font:var(--weight-normal) 22px/1 var(--font-readout);color:var(--led-green-dim)">12.004</span></div><div style="background:var(--readout-bg);box-shadow:var(--bevel-in);padding:8px 12px">
+<span style="font:var(--weight-normal) 30px/1 var(--font-readout);letter-spacing:var(--tracking-readout);color:var(--led-amber);text-shadow:0 0 6px var(--led-amber)">12.004</span>
+<span style="display:block;font:var(--weight-normal) 22px/1 var(--font-readout);color:var(--led-amber-dim)">12.004</span></div><div style="background:var(--readout-bg);box-shadow:var(--bevel-in);padding:8px 12px">
+<span style="font:var(--weight-normal) 30px/1 var(--font-readout);letter-spacing:var(--tracking-readout);color:var(--led-red);text-shadow:0 0 6px var(--led-red)">12.004</span>
+<span style="display:block;font:var(--weight-normal) 22px/1 var(--font-readout);color:var(--led-red-dim)">12.004</span></div>
+</div><div class="row"><div class="sw"><div class="chip" style="background:#22ff66"></div><span class="n">led green</span><span class="v">--led-green</span></div><div class="sw"><div class="chip" style="background:#ffb000"></div><span class="n">led amber</span><span class="v">--led-amber</span></div><div class="sw"><div class="chip" style="background:#ff3b30"></div><span class="n">led red</span><span class="v">--led-red</span></div><div class="sw"><div class="chip" style="background:#0b1a0f"></div><span class="n">readout bg</span><span class="v">--readout-bg</span></div></div>
+</body></html>
